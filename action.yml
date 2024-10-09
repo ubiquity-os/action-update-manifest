@@ -87,6 +87,10 @@ runs:
     - name: Commit and Push changes
       shell: bash
       run: |
+        if [ -z "${{ env.GPG_PRIVATE_KEY }}" ]; then
+          git config --global user.name "ubiquity-os[bot]"
+          git config --global user.email "ubiquity-os[bot]@example.com"
+        fi
         git add "${{ inputs.manifest-path }}"
         git add -f ${{ github.workspace }}/dist/\*
         if [ -n "$(git diff-index --cached --name-only HEAD)" ]; then
