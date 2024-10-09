@@ -1,3 +1,3 @@
-# @ubiquity-os/action-update-manifest
+# @ubiquity-os/action-deploy-plugin
 
-Action to update a plugin's manifest content.
+Action to update a plugin's manifest content, and compiled code.
