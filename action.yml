@@ -1,0 +1,89 @@
+name: "Update Manifest and Commit Changes"
+description: "Checks out the repository, sets up Node, installs dependencies, updates manifest.json, formats, and commits/pushes changes signing the commit."
+inputs:
+  manifest-path:
+    description: "The path to the manifest.json file."
+    required: false
+    default: "${{ github.workspace }}/manifest.json"
+  schema-path:
+    description: "The path to the plugin settings schema."
+    required: false
+    default: "${{ github.workspace }}/src/types/plugin-inputs.js"
+  commit-message:
+    description: "The commit message."
+    required: false
+    default: "chore: updated manifest.json"
+  node-version:
+    description: "The version of Node.js to use."
+    default: "20.10.0"
+outputs: {}
+runs:
+  using: "composite"
+  steps:
+    - name: Check out the repository
+      uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+
+    - name: Import GPG key
+      id: import-gpg
+      if: ${{ env.GPG_PRIVATE_KEY != null }}
+      uses: crazy-max/ghaction-import-gpg@v4
+      with:
+        gpg_private_key: ${{ env.GPG_PRIVATE_KEY }}
+        passphrase: ${{ env.GPG_PASSPHRASE }}
+        git_user_signingkey: true
+        git_commit_gpgsign: true
+
+    - name: Install dependencies
+      shell: bash
+      run: |
+        yarn install --immutable --immutable-cache --check-cache
+
+    - name: Compile TypeScript files
+      shell: bash
+      run: |
+        yarn tsc --project tsconfig.json -m commonjs
+
+    - name: Update manifest configuration JSON
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          const path = require('path');
+
+          const { pluginSettingsSchema } = require('${{ inputs.schema-path }}');
+
+          const manifestPath = '${{ inputs.manifest-path }}'
+          const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+
+          const configuration = JSON.stringify(pluginSettingsSchema);
+
+          manifest["configuration"] = JSON.parse(configuration);
+
+          const updatedManifest = JSON.stringify(manifest, null, 2)
+          console.log('Updated manifest:', updatedManifest);
+          fs.writeFileSync(manifestPath, updatedManifest);
+
+    - name: Format manifest using Prettier
+      shell: bash
+      run: |
+        yarn add -DE prettier
+        yarn prettier --write .
+
+    - name: Commit and Push changes
+      shell: bash
+      run: |
+        git add "${{ inputs.manifest-path }}"
+        if [ -n "$(git diff-index --cached --name-only HEAD)" ]; then
+          git commit -m "${{ inputs.commit-message }}" || echo "Commit failed"
+          git checkout .
+          git status
+          git pull
+          git push origin HEAD:${{ github.ref_name }}
+        else
+          echo "No changes to commit"
+        fi
