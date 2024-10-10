@@ -96,7 +96,7 @@ runs:
         if [ -n "$(git diff-index --cached --name-only HEAD)" ]; then
           git commit -m "${{ inputs.commit-message }}" || echo "Commit failed"
           # Attempt to pull and resolve conflicts
-          git pull --rebase origin ${{ github.ref_name }} || {
+          git pull origin ${{ github.ref_name }} || {
             echo "Rebase failed, force pushing changes."
             git push --force origin HEAD:${{ github.ref_name }}
             exit 0
