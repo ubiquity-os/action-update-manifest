@@ -95,9 +95,12 @@ runs:
         git add -f ${{ github.workspace }}/dist/\*
         if [ -n "$(git diff-index --cached --name-only HEAD)" ]; then
           git commit -m "${{ inputs.commit-message }}" || echo "Commit failed"
-          git checkout .
-          git status
-          git pull --no-rebase
+          # Attempt to pull and resolve conflicts
+          git pull --rebase origin ${{ github.ref_name }} || {
+            echo "Rebase failed, force pushing changes."
+            git push --force origin HEAD:${{ github.ref_name }}
+            exit 0
+          }
           git push origin HEAD:${{ github.ref_name }}
         else
           echo "No changes to commit"
