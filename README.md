@@ -16,7 +16,7 @@ This GitHub Action automates the process of checking out a repository, setting u
 - **`schema-path`**:
     - **Description**: The path to the plugin settings schema.
     - **Required**: No
-    - **Default**: `${{ github.workspace }}/src/types/plugin-inputs.js`
+    - **Default**: `${{ github.workspace }}/src/types/plugin-input.js`
 
 - **`plugin-entry`**:
     - **Description**: The path to the plugin entry file.
@@ -78,7 +78,7 @@ jobs:
         uses: ubiquity-os/action-deploy-plugin@main
         with:
           manifest-path: ${{ github.workspace }}/manifest.json
-          schema-path: ${{ github.workspace }}/src/types/plugin-inputs.js
+          schema-path: ${{ github.workspace }}/src/types/plugin-input.js
           plugin-entry: ${{ github.workspace }}/src/index.ts
           commit-message: "chore: updated manifest.json"
           node-version: "20.10.0"
