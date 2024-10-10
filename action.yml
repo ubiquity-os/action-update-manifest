@@ -97,7 +97,7 @@ runs:
           git commit -m "${{ inputs.commit-message }}" || echo "Commit failed"
           git checkout .
           git status
-          git pull
+          git pull --no-rebase
           git push origin HEAD:${{ github.ref_name }}
         else
           echo "No changes to commit"
