@@ -89,7 +89,7 @@ runs:
       run: |
         if [ -z "${{ env.GPG_PRIVATE_KEY }}" ]; then
           git config --global user.name "ubiquity-os[bot]"
-          git config --global user.email "ubiquity-os[bot]@example.com"
+          git config --global user.email "ubiquity-os[bot]@users.noreply.github.com"
         fi
         git add "${{ inputs.manifest-path }}"
         git add -f ${{ github.workspace }}/dist/\*
