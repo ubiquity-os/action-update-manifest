@@ -83,42 +83,41 @@ runs:
       uses: actions/github-script@v7
       with:
         script: |
-          const { Octokit } = await import('@octokit/core');
-          const { createAppAuth } = await import('@octokit/auth-app');
-          import fs from 'fs';
-
-          const appId = process.env.APP_ID;
-          const privateKey = process.env.APP_PRIVATE_KEY;
-          const githubToken = process.env.GITHUB_TOKEN;
-          const useAppAuth = appId && privateKey;
-
-          const owner = process.env.GITHUB_REPOSITORY_OWNER;
-          const repo = process.env.GITHUB_REPOSITORY.split('/')[1];
-          const manifestPath = '${{ inputs.manifest-path }}';
-          const commitMessage = '${{ inputs.commit-message }}';
-          const branch = process.env.GITHUB_REF_NAME;
-
-          let octokit;
-
-          if (useAppAuth) {
-            octokit = new Octokit({
-              authStrategy: createAppAuth,
-              auth: {
-                appId: appId,
-                privateKey: privateKey,
-                installationId: process.env.APP_INSTALLATION_ID
-              }
-            });
-          } else {
-            console.log("No APP_ID or APP_PRIVATE_KEY have been set, using default GITHUB_TOKEN.")
-            octokit = new Octokit({
-              auth: githubToken
-            });
-          }
-
-          const manifestContent = fs.readFileSync(manifestPath, 'utf8');
-          
           (async () => {
+            const { Octokit } = require('@octokit/core');
+            const { createAppAuth } = require('@octokit/auth-app');
+            const fs = require('fs');
+
+            const appId = process.env.APP_ID;
+            const privateKey = process.env.APP_PRIVATE_KEY;
+            const githubToken = process.env.GITHUB_TOKEN;
+            const useAppAuth = appId && privateKey;
+
+            const owner = process.env.GITHUB_REPOSITORY_OWNER;
+            const repo = process.env.GITHUB_REPOSITORY.split('/')[1];
+            const manifestPath = '${{ inputs.manifest-path }}';
+            const commitMessage = '${{ inputs.commit-message }}';
+            const branch = process.env.GITHUB_REF_NAME;
+
+            let octokit;
+            if (useAppAuth) {
+              octokit = new Octokit({
+                authStrategy: createAppAuth,
+                auth: {
+                  appId: appId,
+                  privateKey: privateKey,
+                  installationId: process.env.APP_INSTALLATION_ID
+                }
+              });
+            } else {
+              console.log("No APP_ID or APP_PRIVATE_KEY have been set, using default GITHUB_TOKEN.")
+              octokit = new Octokit({
+                auth: githubToken
+              });
+            }
+
+            const manifestContent = fs.readFileSync(manifestPath, 'utf8');
+          
             const { data: { default_branch } } = await octokit.request('GET /repos/{owner}/{repo}', {
               owner,
               repo
