@@ -84,9 +84,9 @@ runs:
       with:
         script: |
           (async () => {
-            const { Octokit } = require('@octokit/core');
-            const { createAppAuth } = require('@octokit/auth-app');
-            const fs = require('fs');
+            const { Octokit } = await import('@octokit/core');
+            const { createAppAuth } = await import('@octokit/auth-app');
+            const fs = await import('fs');
 
             const appId = process.env.APP_ID;
             const privateKey = process.env.APP_PRIVATE_KEY;
