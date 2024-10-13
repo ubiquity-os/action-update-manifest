@@ -87,19 +87,6 @@ runs:
       env:
         GITHUB_TOKEN: ${{ steps.get_installation_token.outputs.token || github.token }}
       run: |
-        user_info=$(curl -s -H "Authorization: token ${{ env.GITHUB_TOKEN }}" https://api.github.com/user)
-
-        echo "$user_info"
-
-        user_name=$(echo "$user_info" | jq -r .name)
-        user_email=$(echo "$user_info" | jq -r .email)
-        
-        if [ "$user_email" == "null" ]; then
-          user_email="${{ github.actor }}@users.noreply.github.com"
-        fi
-        
-        git config --global user.name "$user_name"
-        git config --global user.email "$user_email"
         git remote set-url origin https://${{ env.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
     
         git add "${{ inputs.manifest-path }}"
