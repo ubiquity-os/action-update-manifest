@@ -81,4 +81,4 @@ runs:
 
     - name: Commit and Push changes using Octokit
       shell: bash
-      run: node ./src/index.js
+      run: node ./scripts/index.js
