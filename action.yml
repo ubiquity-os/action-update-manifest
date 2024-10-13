@@ -88,59 +88,23 @@ runs:
         private_key: ${{ inputs.app-private-key }}
 
     - name: Commit and Push changes
-      uses: actions/github-script@v7
+      shell: bash
       env:
-        github-token: ${{ steps.get_installation_token.outputs.token || github.token }}
-      with:
-        script: |
-          const fs = require('fs');
-          
-          const owner = process.env.GITHUB_REPOSITORY_OWNER;
-          const repo = process.env.GITHUB_REPOSITORY.split('/')[1];
-          const manifestPath = '${{ inputs.manifest-path }}';
-          const commitMessage = '${{ inputs.commit-message }}';
-          const branch = process.env.GITHUB_REF_NAME;
-          
-          const manifestContent = fs.readFileSync(manifestPath, 'utf8');
-          
-          const { data: { default_branch } } = await github.rest.repos.get({
-            owner,
-            repo
-          });
-          
-          const branchToUse = branch || default_branch;
-  
-          const { data: { object: { sha: latestSha } } } = await github.rest.git.getRef({
-                          owner,
-                          repo,
-                          ref: `heads/${branchToUse}`
-          });
-  
-          const { data: { sha: newTreeSha } } = await github.rest.git.createTree({
-                          owner,
-                          repo,
-                          tree: [{
-                            path: manifestPath,
-                            mode: '100644',
-                            type: 'blob',
-                            content: manifestContent
-                          }],
-                          base_tree: latestSha
-          });
-  
-          const { data: { sha: newCommitSha } } = await github.rest.git.createCommit({
-                          owner,
-                          repo,
-                          message: commitMessage,
-                          tree: newTreeSha,
-                          parents: [latestSha]
-          });
-  
-          await github.rest.git.updateRef({
-            owner,
-            repo,
-            ref: `heads/${branchToUse}`,
-            sha: newCommitSha
-          });
-  
-          console.log(`Changes committed and pushed to ${branchToUse}`);
+        GITHUB_TOKEN: ${{ steps.get_installation_token.outputs.token || github.token }}
+      run: |
+        git remote set-url origin https://${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+    
+        git add "${{ inputs.manifest-path }}"
+        git add -f ${{ github.workspace }}/dist/\*
+        if [ -n "$(git diff-index --cached --name-only HEAD)" ]; then
+          git commit -m "${{ inputs.commit-message }}" || echo "Commit failed"
+          # Attempt to pull and resolve conflicts
+          git pull origin ${{ github.ref_name }} || {
+            echo "Rebase failed, force pushing changes."
+            git push --force origin HEAD:${{ github.ref_name }}
+            exit 0
+          }
+          git push origin HEAD:${{ github.ref_name }}
+        else
+          echo "No changes to commit"
+        fi
