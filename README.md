@@ -83,9 +83,26 @@ jobs:
           commit-message: "chore: updated manifest.json"
           node-version: "20.10.0"
         env:
-          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
-          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+          APP_ID: ${{ secrets.APP_ID }}
+          APP_PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
+          APP_INSTALLATION_ID: ${{ secrets.GITHUB_INSTALLATION_ID }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
+
+## Environment Variables
+
+### Required
+
+- **`GITHUB_TOKEN`**: A GitHub token with repository permissions. This is automatically provided by GitHub Actions and does not require manual setup.
+
+### Optional
+
+If GitHub App authentication is to be used, the following environment variables are needed:
+- **`APP_ID`**: The GitHub App ID.
+- **`APP_PRIVATE_KEY`**: The GitHub App private key.
+- **`APP_INSTALLATION_ID`**: The installation ID for the GitHub App.
+
+When `APP_ID` and `APP_PRIVATE_KEY` are provided, the action will use GitHub App authentication. If they are not provided, the action will default to using `GITHUB_TOKEN`.
 
 ## Features
 
