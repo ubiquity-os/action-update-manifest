@@ -84,8 +84,8 @@ jobs:
           node-version: "20.10.0"
         env:
           APP_ID: ${{ secrets.APP_ID }}
-          APP_PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
-          APP_INSTALLATION_ID: ${{ secrets.GITHUB_INSTALLATION_ID }}
+          APP_PRIVATE_KEY: ${{ secrets.APP_PRIVATE_KEY }}
+          APP_INSTALLATION_ID: ${{ secrets.APP_INSTALLATION_ID }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
