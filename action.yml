@@ -87,7 +87,7 @@ runs:
       env:
         GITHUB_TOKEN: ${{ steps.get_installation_token.outputs.token || github.token }}
       run: |
-        user_info=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" https://api.github.com/user)
+        user_info=$(curl -s -H "Authorization: token ${{ env.GITHUB_TOKEN }}" https://api.github.com/user)
         
         user_name=$(echo "$user_info" | jq -r .name)
         user_email=$(echo "$user_info" | jq -r .email)
