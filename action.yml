@@ -87,6 +87,23 @@ runs:
       env:
         GITHUB_TOKEN: ${{ steps.get_installation_token.outputs.token || github.token }}
       run: |
+        git config --global user.name "GitHub App"
+        git config --global user.email "github-app@example.com"
+    
+        app_token="${{ steps.get_installation_token.outputs.token }}" # Assuming this outputs your app token
+    
+        user_info=$(curl -s -H "Authorization: token $app_token" https://api.github.com/user)
+    
+        user_name=$(echo "$user_info" | jq -r .name)
+        user_email=$(echo "$user_info" | jq -r .email)
+    
+        if [ "$user_email" == "null" ]; then
+          user_email="github-app@example.com"
+        fi
+        
+        # Configure Git with the retrieved user information
+        git config --global user.name "$user_name"
+        git config --global user.email "$user_email"
         git remote set-url origin https://${{ env.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
     
         git add "${{ inputs.manifest-path }}"
