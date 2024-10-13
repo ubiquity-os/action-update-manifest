@@ -85,8 +85,7 @@ runs:
         script: |
           const { Octokit } = await import('@octokit/core');
           const { createAppAuth } = await import('@octokit/auth-app');
-          const fs = require('fs');
-          const path = require('path');
+          import fs from 'fs';
 
           const appId = process.env.APP_ID;
           const privateKey = process.env.APP_PRIVATE_KEY;
