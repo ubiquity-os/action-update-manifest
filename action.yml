@@ -77,14 +77,13 @@ runs:
     - name: Add GitHub packages
       shell: bash
       run: |
-        yarn add @octokit/rest @octokit/auth-app
+        yarn add @octokit/auth-app
 
     - name: Commit and Push changes using Octokit
       uses: actions/github-script@v7
       with:
         script: |
           (async () => {
-            const { Octokit } = await import('@octokit/rest');
             const { createAppAuth } = await import('@octokit/auth-app');
             const fs = await import('fs');
 
@@ -98,22 +97,21 @@ runs:
             const manifestPath = '${{ inputs.manifest-path }}';
             const commitMessage = '${{ inputs.commit-message }}';
             const branch = process.env.GITHUB_REF_NAME;
+            const installationId = process.env.APP_INSTALLATION_ID
 
             let octokit;
             if (useAppAuth) {
-              octokit = new Octokit({
+              octokit = github.getOctokit({
                 authStrategy: createAppAuth,
                 auth: {
-                  appId: appId,
+                  appId: process.env.APP_ID,
                   privateKey: privateKey,
-                  installationId: process.env.APP_INSTALLATION_ID
+                  installationId: process.env.INSTALLATION_ID
                 }
               });
             } else {
               console.log("No APP_ID or APP_PRIVATE_KEY have been set, using default GITHUB_TOKEN.")
-              octokit = new Octokit({
-                auth: githubToken
-              });
+              octokit = github.getOctokit(process.env.GITHUB_TOKEN);
             }
 
             const manifestContent = fs.readFileSync(manifestPath, 'utf8');
