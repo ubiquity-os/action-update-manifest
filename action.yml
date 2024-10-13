@@ -32,16 +32,6 @@ runs:
       with:
         node-version: ${{ inputs.node-version }}
 
-    - name: Import GPG key
-      id: import-gpg
-      if: ${{ env.GPG_PRIVATE_KEY != null }}
-      uses: crazy-max/ghaction-import-gpg@v4
-      with:
-        gpg_private_key: ${{ env.GPG_PRIVATE_KEY }}
-        passphrase: ${{ env.GPG_PASSPHRASE }}
-        git_user_signingkey: true
-        git_commit_gpgsign: true
-
     - name: Install dependencies
       shell: bash
       run: |
@@ -84,24 +74,86 @@ runs:
         yarn add -DE prettier
         yarn prettier --write .
 
-    - name: Commit and Push changes
-      shell: bash
-      run: |
-        if [ -z "${{ env.GPG_PRIVATE_KEY }}" ]; then
-          git config --global user.name "ubiquity-os[bot]"
-          git config --global user.email "ubiquity-os[bot]@users.noreply.github.com"
-        fi
-        git add "${{ inputs.manifest-path }}"
-        git add -f ${{ github.workspace }}/dist/\*
-        if [ -n "$(git diff-index --cached --name-only HEAD)" ]; then
-          git commit -m "${{ inputs.commit-message }}" || echo "Commit failed"
-          # Attempt to pull and resolve conflicts
-          git pull origin ${{ github.ref_name }} || {
-            echo "Rebase failed, force pushing changes."
-            git push --force origin HEAD:${{ github.ref_name }}
-            exit 0
+    - name: Commit and Push changes using Octokit
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const { Octokit } = require('@octokit/core');
+          const { createAppAuth } = require('@octokit/auth-app');
+          const fs = require('fs');
+          const path = require('path');
+
+          const appId = process.env.APP_ID';
+          const privateKey = process.env.APP_PRIVATE_KEY;
+          const githubToken = process.env.GITHUB_TOKEN;
+          const useAppAuth = appId && privateKey;
+
+          const owner = process.env.GITHUB_REPOSITORY_OWNER;
+          const repo = process.env.GITHUB_REPOSITORY.split('/')[1];
+          const manifestPath = '${{ inputs.manifest-path }}';
+          const commitMessage = '${{ inputs.commit-message }}';
+          const branch = process.env.GITHUB_REF_NAME;
+
+          let octokit;
+
+          if (useAppAuth) {
+            octokit = new Octokit({
+              authStrategy: createAppAuth,
+              auth: {
+                appId: appId,
+                privateKey: privateKey,
+                installationId: process.env.APP_INSTALLATION_ID
+              }
+            });
+          } else {
+            console.log("No APP_ID or APP_PRIVATE_KEY have been set, using default GITHUB_TOKEN.")
+            octokit = new Octokit({
+              auth: githubToken
+            });
           }
-          git push origin HEAD:${{ github.ref_name }}
-        else
-          echo "No changes to commit"
-        fi
+
+          const manifestContent = fs.readFileSync(manifestPath, 'utf8');
+          
+          (async () => {
+            const { data: { default_branch } } = await octokit.request('GET /repos/{owner}/{repo}', {
+              owner,
+              repo
+            });
+
+            const branchToUse = branch || default_branch;
+
+            const { data: { object: { sha: latestSha } } } = await octokit.request('GET /repos/{owner}/{repo}/git/ref/{ref}', {
+              owner,
+              repo,
+              ref: `heads/${branchToUse}`
+            });
+
+            const { data: { sha: newTreeSha } } = await octokit.request('POST /repos/{owner}/{repo}/git/trees', {
+              owner,
+              repo,
+              tree: [{
+                path: manifestPath,
+                mode: '100644',
+                type: 'blob',
+                content: manifestContent
+              }],
+              base_tree: latestSha
+            });
+
+            const { data: { sha: newCommitSha } } = await octokit.request('POST /repos/{owner}/{repo}/git/commits', {
+              owner,
+              repo,
+              message: commitMessage,
+              tree: newTreeSha,
+              parents: [latestSha]
+            });
+
+            await octokit.request('PATCH /repos/{owner}/{repo}/git/refs/{ref}', {
+              owner,
+              repo,
+              ref: `heads/${branchToUse}`,
+              sha: newCommitSha
+            });
+
+            console.log(`Changes committed and pushed to ${branchToUse}`);
+          })();
