@@ -83,7 +83,7 @@ runs:
           const fs = require('fs');
           const path = require('path');
 
-          const appId = process.env.APP_ID';
+          const appId = process.env.APP_ID;
           const privateKey = process.env.APP_PRIVATE_KEY;
           const githubToken = process.env.GITHUB_TOKEN;
           const useAppAuth = appId && privateKey;
