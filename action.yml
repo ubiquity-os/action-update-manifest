@@ -74,6 +74,11 @@ runs:
         yarn add -DE prettier
         yarn prettier --write .
 
+    - name: Add GitHub packages
+      shell: bash
+      run: |
+        yarn add -DE @octokit/core @octokit/auth-app
+
     - name: Commit and Push changes using Octokit
       uses: actions/github-script@v7
       with:
