@@ -80,4 +80,5 @@ runs:
         yarn add @octokit/auth-app @octokit/core
 
     - name: Commit and Push changes using Octokit
+      shell: bash
       run: node ./src/index.js
