@@ -74,11 +74,6 @@ runs:
         yarn add -DE prettier
         yarn prettier --write .
 
-    - name: Add GitHub packages
-      shell: bash
-      run: |
-        yarn add @octokit/auth-app @octokit/core
-
     - name: Get GitHub App token
       if: inputs.app-id != '' && inputs.app-private-key != ''
       uses: tibdex/github-app-token@v1.7.0
