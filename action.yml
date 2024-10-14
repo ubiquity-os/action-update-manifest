@@ -109,8 +109,8 @@ runs:
             echo "Rebase failed, force pushing changes."
             git push --force origin HEAD:${{ github.ref_name }}
             exit 0
-            git push origin HEAD:${{ github.ref_name }}
           }
+          git push origin HEAD:${{ github.ref_name }}
         else
           echo "No changes to commit"
         fi
