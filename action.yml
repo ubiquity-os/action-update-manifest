@@ -57,7 +57,7 @@ runs:
       shell: bash
       run: |
         yarn add -DE @vercel/ncc
-        yarn ncc build ${{ inputs.plugin-entry }} -m
+        yarn ncc build "${{ inputs.plugin-entry }}" -m
 
     - name: Update manifest configuration JSON
       uses: actions/github-script@v7
