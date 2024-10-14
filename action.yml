@@ -32,6 +32,16 @@ runs:
       with:
         node-version: ${{ inputs.node-version }}
 
+    - name: Import GPG key
+      id: import-gpg
+      if: ${{ env.GPG_PRIVATE_KEY != null }}
+      uses: crazy-max/ghaction-import-gpg@v4
+      with:
+        gpg_private_key: ${{ env.GPG_PRIVATE_KEY }}
+        passphrase: ${{ env.GPG_PASSPHRASE }}
+        git_user_signingkey: true
+        git_commit_gpgsign: true
+
     - name: Install dependencies
       shell: bash
       run: |
@@ -84,22 +94,11 @@ runs:
 
     - name: Commit and Push changes
       shell: bash
-      env:
-        GITHUB_TOKEN: ${{ steps.get_installation_token.outputs.token || github.token }}
       run: |
-        user_info=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" https://api.github.com/user)
-        
-        user_name=$(echo "$user_info" | jq -r .name)
-        user_email=$(echo "$user_info" | jq -r .email)
-        
-        if [ "$user_email" == "null" ]; then
-        user_email="${{ github.actor }}@users.noreply.github.com"
+        if [ -z "${{ env.GPG_PRIVATE_KEY }}" ]; then
+          git config --global user.name "ubiquity-os[bot]"
+          git config --global user.email "ubiquity-os[bot]@users.noreply.github.com"
         fi
-        
-        git config --global user.name "$user_name"
-        git config --global user.email "$user_email"
-        git remote set-url origin https://${{ env.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
-    
         git add "${{ inputs.manifest-path }}"
         git add -f ${{ github.workspace }}/dist/\*
         if [ -n "$(git diff-index --cached --name-only HEAD)" ]; then
@@ -109,8 +108,8 @@ runs:
             echo "Rebase failed, force pushing changes."
             git push --force origin HEAD:${{ github.ref_name }}
             exit 0
+            git push origin HEAD:${{ github.ref_name }}
           }
-          git push origin HEAD:${{ github.ref_name }}
         else
           echo "No changes to commit"
         fi
