@@ -8,7 +8,7 @@ inputs:
   schema-path:
     description: "The path to the plugin settings schema."
     required: false
-    default: "${{ github.workspace }}/src/types/plugin-input.js"
+    default: "${{ github.workspace }}/src/types/plugin-input.cjs"
   plugin-entry:
     description: "The path to the plugin entry file."
     required: false
