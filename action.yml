@@ -51,6 +51,7 @@ runs:
       shell: bash
       run: |
         yarn tsc --project tsconfig.json -m commonjs
+        find . -name "*.js" -not -path "./node_modules/*" -exec sh -c 'mv "$1" "${1%.js}.cjs"' _ {} \;
 
     - name: Build project
       shell: bash
