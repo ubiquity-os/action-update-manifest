@@ -8,7 +8,7 @@ inputs:
   schemaPath:
     description: "The path to the plugin settings schema."
     required: false
-    default: "${{ github.workspace }}/src/types/plugin-input.js"
+    default: "${{ github.workspace }}/src/types/plugin-input.ts"
   pluginEntry:
     description: "The path to the plugin entry file."
     required: false
@@ -37,11 +37,6 @@ runs:
       run: |
         yarn install --immutable --immutable-cache --check-cache
 
-    - name: Compile TypeScript files
-      shell: bash
-      run: |
-        yarn tsc --project tsconfig.json -m commonjs
-
     - name: Build project
       shell: bash
       run: |
@@ -55,38 +50,75 @@ runs:
       uses: actions/github-script@v7
       with:
         script: |
-          const fs = require('fs');
+          const fs = require('fs').promises;
           const path = require('path');
 
-          const { pluginSettingsSchema } = require('${{ github.workspace }}/plugin/index');
+          async function updateManifest() {
+            const manifestPath = '${{ inputs.manifestPath }}';
+            const pluginPath = path.resolve('${{ github.workspace }}', 'plugin', 'index.js');
 
-          const manifestPath = '${{ inputs.manifestPath }}'
-          const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+            let pluginSettingsSchema;
+            try {
+              // First, try to load as ESM
+              try {
+                const pluginModule = await import(`file://${pluginPath}`);
+                pluginSettingsSchema = pluginModule.pluginSettingsSchema;
 
-          const configuration = JSON.stringify(pluginSettingsSchema);
+                if (!pluginSettingsSchema) {
+                  throw new Error('pluginSettingsSchema not found in the ESM module');
+                }
+              } catch (esmError) {
+                // If ESM import fails, try loading as CJS
+                try {
+                  const pluginModule = require(pluginPath);
+                  pluginSettingsSchema = pluginModule.pluginSettingsSchema;
 
-          manifest["configuration"] = JSON.parse(configuration);
-
-          function customReviver(key, value) {
-            if (typeof value === "object" && value !== null) {
-              if ("default" in value && "required" in value) {
-                delete value.required;
-              }
-              if (Array.isArray(value.required)) {
-                value.required = value.required.filter(
-                  (prop) => !(value.properties[prop] && "default" in value.properties[prop])
-                );
-                if (!value.required.length) {
-                  delete value.required;
+                  if (!pluginSettingsSchema) {
+                    throw new Error('pluginSettingsSchema not found in the CJS module');
+                  }
+                } catch (cjsError) {
+                  console.error('Error loading module as ESM and CJS:', esmError, cjsError);
+                  process.exit(1);
                 }
               }
+            } catch (error) {
+              console.error('Error loading module:', error);
+              process.exit(1);
             }
-            return value;
+
+            const manifest = JSON.parse(await fs.readFile(manifestPath, 'utf8'));
+            manifest["configuration"] = pluginSettingsSchema;
+
+            function customReviver(key, value) {
+              if (typeof value === "object" && value !== null) {
+                if ("properties" in value && "required" in value) {
+                  const requiredFields = new Set(value.required);
+                  for (const [propKey, propValue] of Object.entries(value.properties)) {
+                    if (typeof propValue === 'object' && 'default' in propValue) {
+                      requiredFields.delete(propKey);
+                    }
+                  }
+                  value.required = Array.from(requiredFields);
+                  if (value.required.length === 0) {
+                    delete value.required;
+                  }
+                }
+
+                // Recursively apply to nested objects and arrays
+                if (Array.isArray(value)) {
+                  return value.map(item => JSON.parse(JSON.stringify(item), customReviver));
+                } else {
+                  return Object.fromEntries(
+                    Object.entries(value).map(([k, v]) => [k, JSON.parse(JSON.stringify(v), customReviver)])
+                  );
+                }
+              }
+              return value;
+            }
+
+            const updatedManifest = JSON.stringify(manifest, customReviver, 2);
+            await fs.writeFile(manifestPath, updatedManifest, 'utf8');
           }
-          
-          const updatedManifest = JSON.stringify(manifest, customReviver, 2);
-          console.log('Updated manifest:', updatedManifest);
-          fs.writeFileSync(manifestPath, updatedManifest);
 
     - name: Format manifest using Prettier
       shell: bash
