@@ -44,7 +44,7 @@ runs:
         echo "Compiling plugin..."
         yarn ncc build --minify ${{ inputs.pluginEntry }} -m -o dist
         echo "Compiling plugin types..."
-        yarn ncc build ${{ inputs.schemaPath }} -m -o plugin && mv plugin/index.js plugin/index.cjs
+        yarn ncc build ${{ inputs.schemaPath }} -m -o plugin
 
     - name: Update manifest configuration JSON
       uses: actions/github-script@v7
@@ -55,7 +55,7 @@ runs:
           
           async function updateManifest() {
             const manifestPath = '${{ inputs.manifestPath }}';
-            const pluginPath = path.resolve('${{ github.workspace }}', 'plugin', 'index.cjs');
+            const pluginPath = path.resolve('${{ github.workspace }}', 'plugin', 'index.js');
           
             let pluginSettingsSchema;
             try {
