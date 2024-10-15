@@ -55,17 +55,17 @@ runs:
       uses: actions/github-script@v7
       with:
         script: |
-          const fs = require('fs');
+          const fs = require('fs').promises;
           const path = require('path');
           
-          function updateManifest() {
+          async function updateManifest() {
             const manifestPath = '${{ inputs.manifestPath }}';
             const pluginPath = path.resolve('${{ github.workspace }}', 'plugin', 'index.js');
           
             let pluginSettingsSchema;
             try {
-              // Use require to load the compiled output
-              const pluginModule = require(pluginPath);
+              // Use dynamic import to load the ES module
+              const pluginModule = await import(`file://${pluginPath}`);
               pluginSettingsSchema = pluginModule.pluginSettingsSchema;
           
               if (!pluginSettingsSchema) {
@@ -76,7 +76,7 @@ runs:
               process.exit(1);
             }
           
-            const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+            const manifest = JSON.parse(await fs.readFile(manifestPath, 'utf8'));
             manifest["configuration"] = pluginSettingsSchema;
           
             function customReviver(key, value) {
@@ -108,15 +108,13 @@ runs:
           
             const updatedManifest = JSON.stringify(manifest, customReviver, 2);
             console.log('Updated manifest:', updatedManifest);
-            fs.writeFileSync(manifestPath, updatedManifest);
+            await fs.writeFile(manifestPath, updatedManifest);
           }
           
-          try {
-            updateManifest();
-          } catch (error) {
+          updateManifest().catch(error => {
             console.error('Error updating manifest:', error);
             process.exit(1);
-          }
+          });
 
     - name: Format manifest using Prettier
       shell: bash
