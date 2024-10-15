@@ -67,7 +67,24 @@ runs:
 
           manifest["configuration"] = JSON.parse(configuration);
 
-          const updatedManifest = JSON.stringify(manifest, null, 2)
+          function customReviver(key, value) {
+            if (typeof value === "object" && value !== null) {
+              if ("default" in value && "required" in value) {
+                delete value.required;
+              }
+              if (Array.isArray(value.required)) {
+                value.required = value.required.filter(
+                  (prop) => !(value.properties[prop] && "default" in value.properties[prop])
+                );
+                if (!value.required.length) {
+                  delete value.required;
+                }
+              }
+            }
+            return value;
+          }
+          
+          const updatedManifest = JSON.stringify(manifest, customReviver, 2);
           console.log('Updated manifest:', updatedManifest);
           fs.writeFileSync(manifestPath, updatedManifest);
 
@@ -91,12 +108,12 @@ runs:
         GITHUB_TOKEN: ${{ steps.get_installation_token.outputs.token || github.token }}
       run: |
         app_token="${{ steps.get_installation_token.outputs.token }}" # Assuming this outputs your app token
-    
+        
         user_info=$(curl -s -H "Authorization: token $app_token" https://api.github.com/user)
-    
+        
         user_name=$(echo "$user_info" | jq -r .name)
         user_email=$(echo "$user_info" | jq -r .email)
-    
+        
         if [ "$user_email" == "null" ]; then
           user_email="ubiquity-os[bot]@users.noreply.github.com"
           user_name="ubiquity-os[bot]"
@@ -106,7 +123,7 @@ runs:
         git config --global user.name "$user_name"
         git config --global user.email "$user_email"
         git remote set-url origin https://${{ env.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
-    
+        
         git add "${{ inputs.manifestPath }}"
         git add -f ${{ github.workspace }}/dist/\*
         if [ -n "$(git diff-index --cached --name-only HEAD)" ]; then
