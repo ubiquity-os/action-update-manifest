@@ -8,7 +8,7 @@ inputs:
   schemaPath:
     description: "The path to the plugin settings schema."
     required: false
-    default: "${{ github.workspace }}/src/types/plugin-input.js"
+    default: "${{ github.workspace }}/src/types/plugin-input.ts"
   pluginEntry:
     description: "The path to the plugin entry file."
     required: false
@@ -37,11 +37,6 @@ runs:
       run: |
         yarn install --immutable --immutable-cache --check-cache
 
-    - name: Compile TypeScript files
-      shell: bash
-      run: |
-        yarn tsc --project tsconfig.json -m commonjs
-
     - name: Build project
       shell: bash
       run: |
@@ -60,7 +55,7 @@ runs:
           
           async function updateManifest() {
             const manifestPath = '${{ inputs.manifestPath }}';
-            const pluginPath = path.resolve('${{ github.workspace }}', 'plugin', 'index.js');
+            const pluginPath = path.resolve('${{ github.workspace }}', 'plugin', 'index.cjs');
           
             let pluginSettingsSchema;
             try {
