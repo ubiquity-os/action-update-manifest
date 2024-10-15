@@ -52,28 +52,43 @@ runs:
         script: |
           const fs = require('fs').promises;
           const path = require('path');
-          
+
           async function updateManifest() {
             const manifestPath = '${{ inputs.manifestPath }}';
             const pluginPath = path.resolve('${{ github.workspace }}', 'plugin', 'index.js');
-          
+
             let pluginSettingsSchema;
             try {
-              // Use dynamic import to load the ES module
-              const pluginModule = await import(`file://${pluginPath}`);
-              pluginSettingsSchema = pluginModule.pluginSettingsSchema;
-          
-              if (!pluginSettingsSchema) {
-                throw new Error('pluginSettingsSchema not found in the module');
+              // First, try to load as ESM
+              try {
+                const pluginModule = await import(`file://${pluginPath}`);
+                pluginSettingsSchema = pluginModule.pluginSettingsSchema;
+
+                if (!pluginSettingsSchema) {
+                  throw new Error('pluginSettingsSchema not found in the ESM module');
+                }
+              } catch (esmError) {
+                // If ESM import fails, try loading as CJS
+                try {
+                  const pluginModule = require(pluginPath);
+                  pluginSettingsSchema = pluginModule.pluginSettingsSchema;
+
+                  if (!pluginSettingsSchema) {
+                    throw new Error('pluginSettingsSchema not found in the CJS module');
+                  }
+                } catch (cjsError) {
+                  console.error('Error loading module as ESM and CJS:', esmError, cjsError);
+                  process.exit(1);
+                }
               }
             } catch (error) {
               console.error('Error loading module:', error);
               process.exit(1);
             }
-          
+
             const manifest = JSON.parse(await fs.readFile(manifestPath, 'utf8'));
             manifest["configuration"] = pluginSettingsSchema;
-          
+
             function customReviver(key, value) {
               if (typeof value === "object" && value !== null) {
                 if ("properties" in value && "required" in value) {
@@ -88,7 +103,7 @@ runs:
                     delete value.required;
                   }
                 }
-                
+
                 // Recursively apply to nested objects and arrays
                 if (Array.isArray(value)) {
                   return value.map(item => JSON.parse(JSON.stringify(item), customReviver));
@@ -100,16 +115,10 @@ runs:
               }
               return value;
             }
-          
+
             const updatedManifest = JSON.stringify(manifest, customReviver, 2);
-            console.log('Updated manifest:', updatedManifest);
-            await fs.writeFile(manifestPath, updatedManifest);
+            await fs.writeFile(manifestPath, updatedManifest, 'utf8');
           }
-          
-          updateManifest().catch(error => {
-            console.error('Error updating manifest:', error);
-            process.exit(1);
-          });
 
     - name: Format manifest using Prettier
       shell: bash
