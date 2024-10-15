@@ -55,32 +55,25 @@ runs:
       uses: actions/github-script@v7
       with:
         script: |
-          const fs = require('fs');
+          const fs = require('fs').promises;
           const path = require('path');
           
           async function updateManifest() {
             const manifestPath = '${{ inputs.manifestPath }}';
-            const pluginPath = '${{ github.workspace }}/plugin/index';
+            const pluginPath = path.resolve('${{ github.workspace }}', 'plugin', 'index.js');
           
             let pluginSettingsSchema;
             try {
-              // Try to import as ESM
-              const module = await import(pluginPath);
+              // Use dynamic import with file protocol
+              const module = await import(`file://${pluginPath}`);
               pluginSettingsSchema = module.pluginSettingsSchema;
             } catch (error) {
-              if (error.code === 'ERR_REQUIRE_ESM') {
-                // If it's an ESM module, use dynamic import
-                const module = await import(`file://${pluginPath}.js`);
-                pluginSettingsSchema = module.pluginSettingsSchema;
-              } else {
-                // If it's not an ESM error, assume it's CommonJS
-                pluginSettingsSchema = require(pluginPath).pluginSettingsSchema;
-              }
+              console.error('Error importing module:', error);
+              process.exit(1);
             }
           
-            const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
-            const configuration = JSON.stringify(pluginSettingsSchema);
-            manifest["configuration"] = JSON.parse(configuration);
+            const manifest = JSON.parse(await fs.readFile(manifestPath, 'utf8'));
+            manifest["configuration"] = pluginSettingsSchema;
           
             function customReviver(key, value) {
               if (typeof value === "object" && value !== null) {
@@ -96,7 +89,7 @@ runs:
                     delete value.required;
                   }
                 }
-          
+                
                 // Recursively apply to nested objects and arrays
                 if (Array.isArray(value)) {
                   return value.map(item => JSON.parse(JSON.stringify(item), customReviver));
@@ -111,7 +104,7 @@ runs:
           
             const updatedManifest = JSON.stringify(manifest, customReviver, 2);
             console.log('Updated manifest:', updatedManifest);
-            fs.writeFileSync(manifestPath, updatedManifest);
+            await fs.writeFile(manifestPath, updatedManifest);
           }
           
           updateManifest().catch(error => {
