@@ -47,7 +47,7 @@ runs:
       run: |
         yarn add -DE @vercel/ncc
         echo "Compiling plugin..."
-        yarn ncc build ${{ inputs.pluginEntry }} -m -o dist
+        yarn ncc build --minify ${{ inputs.pluginEntry }} -m -o dist
         echo "Compiling plugin types..."
         yarn ncc build ${{ inputs.schemaPath }} -m -o plugin
 
