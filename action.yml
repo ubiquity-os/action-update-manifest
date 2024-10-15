@@ -1,23 +1,23 @@
 name: "Update Manifest and Commit Changes"
 description: "Checks out the repository, sets up Node, installs dependencies, updates manifest.json, formats, and commits/pushes changes signing the commit."
 inputs:
-  manifest-path:
+  manifestPath:
     description: "The path to the manifest.json file."
     required: false
     default: "${{ github.workspace }}/manifest.json"
-  schema-path:
+  schemaPath:
     description: "The path to the plugin settings schema."
     required: false
-    default: "${{ github.workspace }}/src/types/plugin-input.cjs"
-  plugin-entry:
+    default: "${{ github.workspace }}/src/types/plugin-input.js"
+  pluginEntry:
     description: "The path to the plugin entry file."
     required: false
     default: "${{ github.workspace }}/src/index.ts"
-  commit-message:
+  commitMessage:
     description: "The commit message."
     required: false
     default: "chore: updated manifest.json and dist build"
-  node-version:
+  nodeVersion:
     description: "The version of Node.js to use."
     default: "20.10.0"
 outputs: {}
@@ -30,17 +30,7 @@ runs:
     - name: Set up Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: ${{ inputs.node-version }}
-
-    - name: Import GPG key
-      id: import-gpg
-      if: ${{ env.GPG_PRIVATE_KEY != null }}
-      uses: crazy-max/ghaction-import-gpg@v4
-      with:
-        gpg_private_key: ${{ env.GPG_PRIVATE_KEY }}
-        passphrase: ${{ env.GPG_PASSPHRASE }}
-        git_user_signingkey: true
-        git_commit_gpgsign: true
+        node-version: ${{ inputs.nodeVersion }}
 
     - name: Install dependencies
       shell: bash
@@ -51,13 +41,15 @@ runs:
       shell: bash
       run: |
         yarn tsc --project tsconfig.json -m commonjs
-        find . -name "*.js" -not -path "./node_modules/*" -exec sh -c 'mv "$1" "${1%.js}.cjs"' _ {} \;
 
     - name: Build project
       shell: bash
       run: |
         yarn add -DE @vercel/ncc
-        yarn ncc build --minify "${{ inputs.plugin-entry }}"
+        echo "Compiling plugin..."
+        yarn ncc build ${{ inputs.pluginEntry }} -m -o dist
+        echo "Compiling plugin types..."
+        yarn ncc build ${{ inputs.schemaPath }} -m -o plugin
 
     - name: Update manifest configuration JSON
       uses: actions/github-script@v7
@@ -66,9 +58,9 @@ runs:
           const fs = require('fs');
           const path = require('path');
 
-          const { pluginSettingsSchema } = require('${{ inputs.schema-path }}');
+          const { pluginSettingsSchema } = require('${{ github.workspace }}/plugin/index');
 
-          const manifestPath = '${{ inputs.manifest-path }}'
+          const manifestPath = '${{ inputs.manifestPath }}'
           const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
 
           const configuration = JSON.stringify(pluginSettingsSchema);
@@ -86,24 +78,39 @@ runs:
         yarn prettier --write .
 
     - name: Get GitHub App token
-      if: inputs.app-id != '' && inputs.app-private-key != ''
+      if: env.APP_ID != '' && env.APP_PRIVATE_KEY != ''
       uses: tibdex/github-app-token@v1.7.0
       id: get_installation_token
       with:
-        app_id: ${{ inputs.app-id }}
-        private_key: ${{ inputs.app-private-key }}
+        app_id: ${{ env.APP_ID }}
+        private_key: ${{ env.APP_PRIVATE_KEY }}
 
     - name: Commit and Push changes
       shell: bash
+      env:
+        GITHUB_TOKEN: ${{ steps.get_installation_token.outputs.token || github.token }}
       run: |
-        if [ -z "${{ env.GPG_PRIVATE_KEY }}" ]; then
-          git config --global user.name "ubiquity-os[bot]"
-          git config --global user.email "ubiquity-os[bot]@users.noreply.github.com"
+        app_token="${{ steps.get_installation_token.outputs.token }}" # Assuming this outputs your app token
+    
+        user_info=$(curl -s -H "Authorization: token $app_token" https://api.github.com/user)
+    
+        user_name=$(echo "$user_info" | jq -r .name)
+        user_email=$(echo "$user_info" | jq -r .email)
+    
+        if [ "$user_email" == "null" ]; then
+          user_email="ubiquity-os[bot]@users.noreply.github.com"
+          user_name="ubiquity-os[bot]"
         fi
-        git add "${{ inputs.manifest-path }}"
+        
+        # Configure Git with the retrieved user information
+        git config --global user.name "$user_name"
+        git config --global user.email "$user_email"
+        git remote set-url origin https://${{ env.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+    
+        git add "${{ inputs.manifestPath }}"
         git add -f ${{ github.workspace }}/dist/\*
         if [ -n "$(git diff-index --cached --name-only HEAD)" ]; then
-          git commit -m "${{ inputs.commit-message }}" || echo "Commit failed"
+          git commit -m "${{ inputs.commitMessage }}" || echo "Commit failed"
           # Attempt to pull and resolve conflicts
           git pull origin ${{ github.ref_name }} || {
             echo "Rebase failed, force pushing changes."
