@@ -1,110 +1,123 @@
-# @ubiquity-os/action-deploy-plugin
+name: "Update Manifest and Commit Changes"
+description: "Checks out the repository, sets up Node, installs dependencies, updates manifest.json, formats, and commits/pushes changes signing the commit."
+inputs:
+  manifestPath:
+    description: "The path to the manifest.json file."
+    required: false
+    default: "${{ github.workspace }}/manifest.json"
+  schemaPath:
+    description: "The path to the plugin settings schema."
+    required: false
+    default: "${{ github.workspace }}/src/types/plugin-input.js"
+  pluginEntry:
+    description: "The path to the plugin entry file."
+    required: false
+    default: "${{ github.workspace }}/src/index.ts"
+  commitMessage:
+    description: "The commit message."
+    required: false
+    default: "chore: updated manifest.json and dist build"
+  nodeVersion:
+    description: "The version of Node.js to use."
+    default: "20.10.0"
+outputs: {}
+runs:
+  using: "composite"
+  steps:
+    - name: Check out the repository
+      uses: actions/checkout@v4
 
-  Update Manifest, build and commit the changes signing the commit payload.
-  
-  ## Description
-  
-  This GitHub Action automates the process of checking out a repository, setting up Node.js, installing dependencies, updating the `manifest.json` file, formatting it, and committing/pushing the changes with a signed commit.
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.nodeVersion }}
 
-## Inputs
+    - name: Install dependencies
+      shell: bash
+      run: |
+        yarn install --immutable --immutable-cache --check-cache
 
-- **`manifestPath`**:
-    - **Description**: The path to the `manifest.json` file.
-    - **Required**: No
-    - **Default**: `${{ github.workspace }}/manifest.json`
+    - name: Compile TypeScript files
+      shell: bash
+      run: |
+        yarn tsc --project tsconfig.json -m commonjs
 
-- **`schemaPath`**:
-    - **Description**: The path to the plugin settings schema.
-    - **Required**: No
-    - **Default**: `${{ github.workspace }}/src/types/plugin-input.js`
+    - name: Build project
+      shell: bash
+      run: |
+        yarn add -DE @vercel/ncc
+        echo "Compiling plugin..."
+        yarn ncc build --minify ${{ inputs.pluginEntry }} -m -o dist
+        echo "Compiling plugin types..."
+        yarn ncc build ${{ inputs.schemaPath }} -m -o plugin
 
-- **`pluginEntry`**:
-    - **Description**: The path to the plugin entry file.
-    - **Required**: No
-    - **Default**: `${{ github.workspace }}/src/index.ts`
+    - name: Update manifest configuration JSON
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          const path = require('path');
 
-- **`commitMessage`**:
-    - **Description**: The commit message.
-    - **Required**: No
-    - **Default**: `chore: updated manifest.json and dist build`
+          const { pluginSettingsSchema } = require('${{ github.workspace }}/plugin/index');
 
-- **`nodeVersion`**:
-    - **Description**: The version of Node.js to use.
-    - **Default**: `20.10.0`
+          const manifestPath = '${{ inputs.manifestPath }}'
+          const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
 
-## Steps
+          const configuration = JSON.stringify(pluginSettingsSchema);
 
-1. **Check out the repository**:
-  Uses the `actions/checkout@v4` action to check out the repository.
+          manifest["configuration"] = JSON.parse(configuration);
 
-2. **Set up Node.js**:
-  Uses the `actions/setup-node@v4` action to set up a specified version of Node.js.
+          const updatedManifest = JSON.stringify(manifest, null, 2)
+          console.log('Updated manifest:', updatedManifest);
+          fs.writeFileSync(manifestPath, updatedManifest);
 
-3. **Install dependencies**:
-  Runs `yarn install` to install the project's dependencies with immutable and cache check settings.
+    - name: Format manifest using Prettier
+      shell: bash
+      run: |
+        yarn add -DE prettier
+        yarn prettier --write .
 
-4. **Compile TypeScript files**:
-  Compiles the TypeScript files using `yarn tsc` with the specified project configuration.
+    - name: Get GitHub App token
+      if: env.APP_ID != '' && env.APP_PRIVATE_KEY != ''
+      uses: tibdex/github-app-token@v1.7.0
+      id: get_installation_token
+      with:
+        app_id: ${{ env.APP_ID }}
+        private_key: ${{ env.APP_PRIVATE_KEY }}
 
-5. **Build project**:
-  Adds the `@vercel/ncc` package and builds the project using `ncc`.
-
-6. **Update manifest configuration JSON**:
-  Updates the `manifest.json` file with the plugin settings schema.
-
-7. **Format manifest using Prettier**:
-  Installs Prettier and formats the `manifest.json` file and other project files.
-
-8. **Commit and Push changes**:
-  Configures Git, adds the updated files to the commit, and pushes the changes to the repository.
-
-## Usage Example
-  
-  ```yaml
-name: Update Manifest and Commit Changes
-
-on:
-  push:
-
-jobs:
-  update-manifest:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Update Manifest and Commit Changes
-        uses: ubiquity-os/action-deploy-plugin@main
-        with:
-          manifestPath: ${{ github.workspace }}/manifest.json
-          schemaPath: ${{ github.workspace }}/src/types/plugin-input.js
-          pluginEntry: ${{ github.workspace }}/src/index.ts
-          commitMessage: "chore: updated manifest.json and dist build"
-          nodeVersion: "20.10.0"
-        env:
-          APP_ID: ${{ secrets.APP_ID }}
-          APP_PRIVATE_KEY: ${{ secrets.APP_PRIVATE_KEY }}
-          APP_INSTALLATION_ID: ${{ secrets.APP_INSTALLATION_ID }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  ```
-
-## Environment Variables
-
-### Required
-
-- **`GITHUB_TOKEN`**: A GitHub token with repository permissions. This is automatically provided by GitHub Actions and does not require manual setup.
-
-### Optional
-
-If GitHub App authentication is to be used, the following environment variables are needed:
-  - **`APP_ID`**: The GitHub App ID.
-  - **`APP_PRIVATE_KEY`**: The GitHub App private key.
-  - **`APP_INSTALLATION_ID`**: The installation ID for the GitHub App.
-
-  When `APP_ID` and `APP_PRIVATE_KEY` are provided, the action will use GitHub App authentication. If they are not provided, the action will default to using `GITHUB_TOKEN`.
-
-## Features
-
-- Clones the repository and sets up Node.js.
-- Installs project dependencies and compiles TypeScript files.
-- Builds the project using `@vercel/ncc`.
-- Updates the `manifest.json` file.
-- Formats the project files using Prettier.
-- Commits and pushes changes to the repository.
+    - name: Commit and Push changes
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ steps.get_installation_token.outputs.token || github.token }}
+      run: |
+        app_token="${{ steps.get_installation_token.outputs.token }}" # Assuming this outputs your app token
+    
+        user_info=$(curl -s -H "Authorization: token $app_token" https://api.github.com/user)
+    
+        user_name=$(echo "$user_info" | jq -r .name)
+        user_email=$(echo "$user_info" | jq -r .email)
+    
+        if [ "$user_email" == "null" ]; then
+          user_email="ubiquity-os[bot]@users.noreply.github.com"
+          user_name="ubiquity-os[bot]"
+        fi
+        
+        # Configure Git with the retrieved user information
+        git config --global user.name "$user_name"
+        git config --global user.email "$user_email"
+        git remote set-url origin https://${{ env.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+    
+        git add "${{ inputs.manifestPath }}"
+        git add -f ${{ github.workspace }}/dist/\*
+        if [ -n "$(git diff-index --cached --name-only HEAD)" ]; then
+          git commit -m "${{ inputs.commitMessage }}" || echo "Commit failed"
+          # Attempt to pull and resolve conflicts
+          git pull origin ${{ github.ref_name }} || {
+            echo "Rebase failed, force pushing changes."
+            git push --force origin HEAD:${{ github.ref_name }}
+            exit 0
+          }
+          git push origin HEAD:${{ github.ref_name }}
+        else
+          echo "No changes to commit"
+        fi
