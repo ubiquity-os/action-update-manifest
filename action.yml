@@ -57,36 +57,67 @@ runs:
         script: |
           const fs = require('fs');
           const path = require('path');
-
-          const { pluginSettingsSchema } = require('${{ github.workspace }}/plugin/index');
-
-          const manifestPath = '${{ inputs.manifestPath }}'
-          const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
-
-          const configuration = JSON.stringify(pluginSettingsSchema);
-
-          manifest["configuration"] = JSON.parse(configuration);
-
-          function customReviver(key, value) {
-            if (typeof value === "object" && value !== null) {
-              if ("default" in value && "required" in value) {
-                delete value.required;
-              }
-              if (Array.isArray(value.required)) {
-                value.required = value.required.filter(
-                  (prop) => !(value.properties[prop] && "default" in value.properties[prop])
-                );
-                if (!value.required.length) {
-                  delete value.required;
-                }
+          
+          async function updateManifest() {
+            const manifestPath = '${{ inputs.manifestPath }}';
+            const pluginPath = '${{ github.workspace }}/plugin/index';
+          
+            let pluginSettingsSchema;
+            try {
+              // Try to import as ESM
+              const module = await import(pluginPath);
+              pluginSettingsSchema = module.pluginSettingsSchema;
+            } catch (error) {
+              if (error.code === 'ERR_REQUIRE_ESM') {
+                // If it's an ESM module, use dynamic import
+                const module = await import(`file://${pluginPath}.js`);
+                pluginSettingsSchema = module.pluginSettingsSchema;
+              } else {
+                // If it's not an ESM error, assume it's CommonJS
+                pluginSettingsSchema = require(pluginPath).pluginSettingsSchema;
               }
             }
-            return value;
+          
+            const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+            const configuration = JSON.stringify(pluginSettingsSchema);
+            manifest["configuration"] = JSON.parse(configuration);
+          
+            function customReviver(key, value) {
+              if (typeof value === "object" && value !== null) {
+                if ("properties" in value && "required" in value) {
+                  const requiredFields = new Set(value.required);
+                  for (const [propKey, propValue] of Object.entries(value.properties)) {
+                    if (typeof propValue === 'object' && 'default' in propValue) {
+                      requiredFields.delete(propKey);
+                    }
+                  }
+                  value.required = Array.from(requiredFields);
+                  if (value.required.length === 0) {
+                    delete value.required;
+                  }
+                }
+          
+                // Recursively apply to nested objects and arrays
+                if (Array.isArray(value)) {
+                  return value.map(item => JSON.parse(JSON.stringify(item), customReviver));
+                } else {
+                  return Object.fromEntries(
+                    Object.entries(value).map(([k, v]) => [k, JSON.parse(JSON.stringify(v), customReviver)])
+                  );
+                }
+              }
+              return value;
+            }
+          
+            const updatedManifest = JSON.stringify(manifest, customReviver, 2);
+            console.log('Updated manifest:', updatedManifest);
+            fs.writeFileSync(manifestPath, updatedManifest);
           }
           
-          const updatedManifest = JSON.stringify(manifest, customReviver, 2);
-          console.log('Updated manifest:', updatedManifest);
-          fs.writeFileSync(manifestPath, updatedManifest);
+          updateManifest().catch(error => {
+            console.error('Error updating manifest:', error);
+            process.exit(1);
+          });
 
     - name: Format manifest using Prettier
       shell: bash
