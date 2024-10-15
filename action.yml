@@ -49,7 +49,7 @@ runs:
         echo "Compiling plugin..."
         yarn ncc build --minify ${{ inputs.pluginEntry }} -m -o dist
         echo "Compiling plugin types..."
-        yarn ncc build ${{ inputs.schemaPath }} -m -o plugin
+        yarn ncc build ${{ inputs.schemaPath }} -m -o plugin && mv plugin/index.js plugin/index.cjs
 
     - name: Update manifest configuration JSON
       uses: actions/github-script@v7
