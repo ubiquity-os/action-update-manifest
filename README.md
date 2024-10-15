@@ -8,29 +8,28 @@ This GitHub Action automates the process of checking out a repository, setting u
 
 ## Inputs
 
-- **`manifest-path`**:
+- **`manifestPath`**:
     - **Description**: The path to the `manifest.json` file.
     - **Required**: No
     - **Default**: `${{ github.workspace }}/manifest.json`
 
-- **`schema-path`**:
+- **`schemaPath`**:
     - **Description**: The path to the plugin settings schema.
     - **Required**: No
     - **Default**: `${{ github.workspace }}/src/types/plugin-input.js`
 
-- **`plugin-entry`**:
+- **`pluginEntry`**:
     - **Description**: The path to the plugin entry file.
     - **Required**: No
     - **Default**: `${{ github.workspace }}/src/index.ts`
 
-- **`commit-message`**:
+- **`commitMessage`**:
     - **Description**: The commit message.
     - **Required**: No
-    - **Default**: `chore: updated manifest.json`
+    - **Default**: `chore: updated manifest.json and dist build`
 
-- **`node-version`**:
+- **`nodeVersion`**:
     - **Description**: The version of Node.js to use.
-    - **Required**: No
     - **Default**: `20.10.0`
 
 ## Steps
@@ -41,25 +40,22 @@ This GitHub Action automates the process of checking out a repository, setting u
 2. **Set up Node.js**:
    Uses the `actions/setup-node@v4` action to set up a specified version of Node.js.
 
-3. **Import GPG key (optional)**:
-   If a GPG private key is provided, imports it and configures Git to use it for signing commits.
-
-4. **Install dependencies**:
+3. **Install dependencies**:
    Runs `yarn install` to install the project's dependencies with immutable and cache check settings.
 
-5. **Compile TypeScript files**:
+4. **Compile TypeScript files**:
    Compiles the TypeScript files using `yarn tsc` with the specified project configuration.
 
-6. **Build project**:
+5. **Build project**:
    Adds the `@vercel/ncc` package and builds the project using `ncc`.
 
-7. **Update manifest configuration JSON**:
+6. **Update manifest configuration JSON**:
    Updates the `manifest.json` file with the plugin settings schema.
 
-8. **Format manifest using Prettier**:
+7. **Format manifest using Prettier**:
    Installs Prettier and formats the `manifest.json` file and other project files.
 
-9. **Commit and Push changes**:
+8. **Commit and Push changes**:
    Configures Git, adds the updated files to the commit, and pushes the changes to the repository.
 
 ## Usage Example
@@ -77,11 +73,11 @@ jobs:
       - name: Update Manifest and Commit Changes
         uses: ubiquity-os/action-deploy-plugin@main
         with:
-          manifest-path: ${{ github.workspace }}/manifest.json
-          schema-path: ${{ github.workspace }}/src/types/plugin-input.js
-          plugin-entry: ${{ github.workspace }}/src/index.ts
-          commit-message: "chore: updated manifest.json"
-          node-version: "20.10.0"
+          manifestPath: ${{ github.workspace }}/manifest.json
+          schemaPath: ${{ github.workspace }}/src/types/plugin-input.js
+          pluginEntry: ${{ github.workspace }}/src/index.ts
+          commitMessage: "chore: updated manifest.json and dist build"
+          nodeVersion: "20.10.0"
         env:
           APP_ID: ${{ secrets.APP_ID }}
           APP_PRIVATE_KEY: ${{ secrets.APP_PRIVATE_KEY }}
@@ -107,7 +103,6 @@ When `APP_ID` and `APP_PRIVATE_KEY` are provided, the action will use GitHub App
 ## Features
 
 - Clones the repository and sets up Node.js.
-- Imports a GPG key to sign commits (if provided).
 - Installs project dependencies and compiles TypeScript files.
 - Builds the project using `@vercel/ncc`.
 - Updates the `manifest.json` file.
