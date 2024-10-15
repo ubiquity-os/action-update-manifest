@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.1](https://github.com/ubiquity-os/action-deploy-plugin/compare/v1.1.0...v1.1.1) (2024-10-15)
+
+
+### Bug Fixes
+
+* handle schema defaults and required fields correctly ([dc46486](https://github.com/ubiquity-os/action-deploy-plugin/commit/dc46486a0922f243c34a827b6db36556b1bc0a87))
+
 ## [1.1.0](https://github.com/ubiquity-os/action-deploy-plugin/compare/v1.0.0...v1.1.0) (2024-10-15)
 
 
