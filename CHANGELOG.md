@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.1.0](https://github.com/ubiquity-os/action-deploy-plugin/compare/v1.0.0...v1.1.0) (2024-10-15)
+
+
+### Features
+
+* add GitHub packages to action setup ([5eb45f9](https://github.com/ubiquity-os/action-deploy-plugin/commit/5eb45f9a0a4b14b9ce79f135b56e7679f1392c1c))
+
+
+### Bug Fixes
+
+* switch to Octokit for commit and push ([45f54ee](https://github.com/ubiquity-os/action-deploy-plugin/commit/45f54eecb4ebda5eb8b0695e7e3d5b1b774e82d1))
+* update default schema path to use .cjs extension ([d650040](https://github.com/ubiquity-os/action-deploy-plugin/commit/d650040c3cfd7178c69ac48e5bc9a0a548cde791))
+
 ## 1.0.0 (2024-10-10)
 
 
