@@ -32,99 +32,99 @@ runs:
       with:
         node-version: ${{ inputs.nodeVersion }}
 
-    - name: Install dependencies
-      shell: bash
-      run: |
-        yarn install --immutable --immutable-cache --check-cache
-
-    - name: Build project
-      shell: bash
-      run: |
-        yarn add -DE @vercel/ncc
-        echo "Compiling plugin..."
-        yarn ncc build --minify ${{ inputs.pluginEntry }} -m -o dist
-        echo "Compiling plugin types..."
-        yarn ncc build ${{ inputs.schemaPath }} -m -o plugin
-
-    - name: Update manifest configuration JSON
-      uses: actions/github-script@v7
-      with:
-        script: |
-          const fs = require('fs').promises;
-          const path = require('path');
-
-          async function updateManifest() {
-            const manifestPath = '${{ inputs.manifestPath }}';
-            const pluginPath = path.resolve('${{ github.workspace }}', 'plugin', 'index.js');
-
-            let pluginSettingsSchema;
-            try {
-              // First, try to load as ESM
-              try {
-                const pluginModule = await import(`file://${pluginPath}`);
-                pluginSettingsSchema = pluginModule.pluginSettingsSchema;
-
-                if (!pluginSettingsSchema) {
-                  throw new Error('pluginSettingsSchema not found in the ESM module');
-                }
-              } catch (esmError) {
-                // If ESM import fails, try loading as CJS
-                try {
-                  const pluginModule = require(pluginPath);
-                  pluginSettingsSchema = pluginModule.pluginSettingsSchema;
-
-                  if (!pluginSettingsSchema) {
-                    throw new Error('pluginSettingsSchema not found in the CJS module');
-                  }
-                } catch (cjsError) {
-                  console.error('Error loading module as ESM and CJS:', esmError, cjsError);
-                  process.exit(1);
-                }
-              }
-            } catch (error) {
-              console.error('Error loading module:', error);
-              process.exit(1);
-            }
-
-            const manifest = JSON.parse(await fs.readFile(manifestPath, 'utf8'));
-            manifest["configuration"] = pluginSettingsSchema;
-
-            function customReviver(key, value) {
-              if (typeof value === "object" && value !== null) {
-                if ("properties" in value && "required" in value) {
-                  const requiredFields = new Set(value.required);
-                  for (const [propKey, propValue] of Object.entries(value.properties)) {
-                    if (typeof propValue === 'object' && 'default' in propValue) {
-                      requiredFields.delete(propKey);
-                    }
-                  }
-                  value.required = Array.from(requiredFields);
-                  if (value.required.length === 0) {
-                    delete value.required;
-                  }
-                }
-
-                // Recursively apply to nested objects and arrays
-                if (Array.isArray(value)) {
-                  return value.map(item => JSON.parse(JSON.stringify(item), customReviver));
-                } else {
-                  return Object.fromEntries(
-                    Object.entries(value).map(([k, v]) => [k, JSON.parse(JSON.stringify(v), customReviver)])
-                  );
-                }
-              }
-              return value;
-            }
-
-            const updatedManifest = JSON.stringify(manifest, customReviver, 2);
-            await fs.writeFile(manifestPath, updatedManifest, 'utf8');
-          }
-
-    - name: Format manifest using Prettier
-      shell: bash
-      run: |
-        yarn add -DE prettier
-        yarn prettier --write .
+#    - name: Install dependencies
+#      shell: bash
+#      run: |
+#        yarn install --immutable --immutable-cache --check-cache
+#
+#    - name: Build project
+#      shell: bash
+#      run: |
+#        yarn add -DE @vercel/ncc
+#        echo "Compiling plugin..."
+#        yarn ncc build --minify ${{ inputs.pluginEntry }} -m -o dist
+#        echo "Compiling plugin types..."
+#        yarn ncc build ${{ inputs.schemaPath }} -m -o plugin
+#
+#    - name: Update manifest configuration JSON
+#      uses: actions/github-script@v7
+#      with:
+#        script: |
+#          const fs = require('fs').promises;
+#          const path = require('path');
+#
+#          async function updateManifest() {
+#            const manifestPath = '${{ inputs.manifestPath }}';
+#            const pluginPath = path.resolve('${{ github.workspace }}', 'plugin', 'index.js');
+#
+#            let pluginSettingsSchema;
+#            try {
+#              // First, try to load as ESM
+#              try {
+#                const pluginModule = await import(`file://${pluginPath}`);
+#                pluginSettingsSchema = pluginModule.pluginSettingsSchema;
+#
+#                if (!pluginSettingsSchema) {
+#                  throw new Error('pluginSettingsSchema not found in the ESM module');
+#                }
+#              } catch (esmError) {
+#                // If ESM import fails, try loading as CJS
+#                try {
+#                  const pluginModule = require(pluginPath);
+#                  pluginSettingsSchema = pluginModule.pluginSettingsSchema;
+#
+#                  if (!pluginSettingsSchema) {
+#                    throw new Error('pluginSettingsSchema not found in the CJS module');
+#                  }
+#                } catch (cjsError) {
+#                  console.error('Error loading module as ESM and CJS:', esmError, cjsError);
+#                  process.exit(1);
+#                }
+#              }
+#            } catch (error) {
+#              console.error('Error loading module:', error);
+#              process.exit(1);
+#            }
+#
+#            const manifest = JSON.parse(await fs.readFile(manifestPath, 'utf8'));
+#            manifest["configuration"] = pluginSettingsSchema;
+#
+#            function customReviver(key, value) {
+#              if (typeof value === "object" && value !== null) {
+#                if ("properties" in value && "required" in value) {
+#                  const requiredFields = new Set(value.required);
+#                  for (const [propKey, propValue] of Object.entries(value.properties)) {
+#                    if (typeof propValue === 'object' && 'default' in propValue) {
+#                      requiredFields.delete(propKey);
+#                    }
+#                  }
+#                  value.required = Array.from(requiredFields);
+#                  if (value.required.length === 0) {
+#                    delete value.required;
+#                  }
+#                }
+#
+#                // Recursively apply to nested objects and arrays
+#                if (Array.isArray(value)) {
+#                  return value.map(item => JSON.parse(JSON.stringify(item), customReviver));
+#                } else {
+#                  return Object.fromEntries(
+#                    Object.entries(value).map(([k, v]) => [k, JSON.parse(JSON.stringify(v), customReviver)])
+#                  );
+#                }
+#              }
+#              return value;
+#            }
+#
+#            const updatedManifest = JSON.stringify(manifest, customReviver, 2);
+#            await fs.writeFile(manifestPath, updatedManifest, 'utf8');
+#          }
+#
+#    - name: Format manifest using Prettier
+#      shell: bash
+#      run: |
+#        yarn add -DE prettier
+#        yarn prettier --write .
 
     - name: Get GitHub App token
       if: env.APP_ID != '' && env.APP_PRIVATE_KEY != ''
@@ -176,9 +176,7 @@ runs:
       uses: actions/github-script@v7
       with:
         github-token: ${{ steps.get_installation_token.outputs.token || github.token }}
-        script: |
-          const exec = require('@actions/exec');
-          
+        script: |          
           async function run() {
             const octokit = github;
           
@@ -190,19 +188,19 @@ runs:
             console.log("values", data);
           
             // Configure Git with the retrieved user information
-            await exec.exec('git', ['config', '--global', 'user.name', userName]);
-            await exec.exec('git', ['config', '--global', 'user.email', userEmail]);
+            await exec('git', ['config', '--global', 'user.name', userName]);
+            await exec('git', ['config', '--global', 'user.email', userEmail]);
           
             // Set remote URL
-            //await exec.exec('git', ['remote', 'set-url', 'origin', `https://x-access-token:${token}@github.com/${github.context.repo.owner}/${github.context.repo.repo}.git`]);
+            //await exec('git', ['remote', 'set-url', 'origin', `https://x-access-token:${token}@github.com/${github.context.repo.owner}/${github.context.repo.repo}.git`]);
           
             // Add files to commit
-            await exec.exec('git', ['add', core.getInput('manifestPath')]);
-            await exec.exec('git', ['add', '-f', `${github.context.workspace}/dist/*`]);
+            await exec('git', ['add', core.getInput('manifestPath')]);
+            await exec('git', ['add', '-f', `${github.context.workspace}/dist/*`]);
           
             // Check if there are changes to commit
             let changes = '';
-            await exec.exec('git', ['diff-index', '--cached', '--name-only', 'HEAD'], [], {
+            await exec('git', ['diff-index', '--cached', '--name-only', 'HEAD'], [], {
               listeners: {
                 stdout: (data) => {
                   changes += data.toString();
@@ -212,16 +210,16 @@ runs:
           
             if (changes.trim()) {
               try {
-                await exec.exec('git', ['commit', '-m', core.getInput('commitMessage')]);
+                await exec('git', ['commit', '-m', core.getInput('commitMessage')]);
                 try {
                   // Attempt to pull and resolve conflicts
-                  await exec.exec('git', ['pull', 'origin', github.context.ref.replace('refs/heads/', '')]);
+                  await exec('git', ['pull', 'origin', github.context.ref.replace('refs/heads/', '')]);
                 } catch (error) {
                   console.log('Rebase failed, force pushing changes.');
-                  await exec.exec('git', ['push', '--force', 'origin', `HEAD:${github.context.ref.replace('refs/heads/', '')}`]);
+                  await exec('git', ['push', '--force', 'origin', `HEAD:${github.context.ref.replace('refs/heads/', '')}`]);
                   return;
                 }
-                await exec.exec('git', ['push', 'origin', `HEAD:${github.context.ref.replace('refs/heads/', '')}`]);
+                await exec('git', ['push', 'origin', `HEAD:${github.context.ref.replace('refs/heads/', '')}`]);
               } catch (error) {
                 console.log('Commit failed');
               }
