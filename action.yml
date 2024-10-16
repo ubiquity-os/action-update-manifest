@@ -172,104 +172,213 @@ runs:
 #          echo "No changes to commit"
 #        fi
 
-    - name: Commit and Push changes
-      uses: actions/github-script@v7
-      with:
-        github-token: ${{ steps.get_installation_token.outputs.token || github.token }}
-        script: |
-          const fs = require('fs');
-          const path = require('path');
+#    - name: Commit and Push changes
+#      uses: actions/github-script@v7
+#      with:
+#        github-token: ${{ steps.get_installation_token.outputs.token || github.token }}
+#        script: |
+#          const fs = require('fs');
+#          const path = require('path');
+#
+#          async function run() {
+#            const octokit = github;
+#            const ref = "heads/${{ github.ref_name }}";
+#            const tree = "${{ github.sha }}";
+#            const [owner, repo] = "${{ github.repository }}".split('/');
+#            const commitMessage = "${{ inputs.commitMessage }}";
+#            const manifestPath = '${{ inputs.manifestPath }}';
+#
+#            try {
+#              const manifestContent = fs.readFileSync(manifestPath, 'utf8');
+#
+#              // Find the existing blob SHA for the manifest file in the current tree
+#              const { data: treeData } = await octokit.git.getTree({
+#                owner,
+#                repo,
+#                tree_sha: commitData.tree.sha,
+#                recursive: true
+#              });
+#
+#              const manifestFile = treeData.tree.find(file => file.path === manifestPath);
+#
+#              if (manifestFile) {
+#                // Get the current content of the manifest file in the repository
+#                const { data: blobData } = await octokit.git.getBlob({
+#                  owner,
+#                  repo,
+#                  file_sha: manifestFile.sha
+#                });
+#                const existingContent = Buffer.from(blobData.content, 'base64').toString('utf8');
+#
+#                // Check if the content has changed
+#                if (existingContent === manifestContent) {
+#                  console.log('No changes to commit');
+#                  return;
+#                }
+#              }
+#
+#              const { data: blobData } = await octokit.rest.git.createBlob({
+#                owner,
+#                repo,
+#                content: manifestContent,
+#                encoding: "utf-8"
+#              });
+#
+#              const relativePath = path.relative(".", manifestPath);
+#              const { data: treeData } = await octokit.rest.git.createTree({
+#                owner,
+#                repo,
+#                base_tree: tree,
+#                tree: [
+#                  {
+#                    path: relativePath,
+#                    mode: "100644",
+#                    type: "blob",
+#                    sha: blobData.sha
+#                  }
+#                ]
+#              });
+#
+#              const hasChanges = !treeData.tree.some(
+#                (file) => file.path === manifestPath && file.sha === blobData.sha
+#              );
+#
+#              console.log("has changes", hasChanges, JSON.stringify(treeData));
+#
+#              if (!hasChanges) {
+#                console.log('No changes to commit, skipping.');
+#                return;
+#              }
+#
+#              const newCommit = await octokit.rest.git.createCommit({
+#                owner,
+#                repo,
+#                message: commitMessage,
+#                tree: treeData.sha,
+#                parents: [ "${{ github.sha }}" ],
+#              });
+#
+#              await octokit.rest.git.updateRef({
+#                owner,
+#                repo,
+#                ref,
+#                sha: newCommit.data.sha,
+#                force: true
+#              });
+#
+#              console.log('Commit successfully created and pushed.');
+#            } catch (error) {
+#              console.error('Failed to create and push empty commit:', error);
+#              throw error;
+#            }
+#          }
+#          run();
 
-          async function run() {
-            const octokit = github;
-            const ref = "heads/${{ github.ref_name }}";
-            const tree = "${{ github.sha }}";
-            const [owner, repo] = "${{ github.repository }}".split('/');
-            const commitMessage = "${{ inputs.commitMessage }}";
-            const manifestPath = '${{ inputs.manifestPath }}';
-          
-            try {
-              const manifestContent = fs.readFileSync(manifestPath, 'utf8');
-          
-              // Find the existing blob SHA for the manifest file in the current tree
-              const { data: treeData } = await octokit.git.getTree({
-                owner,
-                repo,
-                tree_sha: commitData.tree.sha,
-                recursive: true
-              });
-  
-              const manifestFile = treeData.tree.find(file => file.path === manifestPath);
-  
-              if (manifestFile) {
-                // Get the current content of the manifest file in the repository
-                const { data: blobData } = await octokit.git.getBlob({
-                  owner,
-                  repo,
-                  file_sha: manifestFile.sha
-                });
-                const existingContent = Buffer.from(blobData.content, 'base64').toString('utf8');
-  
-                // Check if the content has changed
-                if (existingContent === manifestContent) {
-                  console.log('No changes to commit');
-                  return;
-                }
-              }
-            
-              const { data: blobData } = await octokit.rest.git.createBlob({
-                owner,
-                repo,
-                content: manifestContent,
-                encoding: "utf-8"
-              });
-          
-              const relativePath = path.relative(".", manifestPath);
-              const { data: treeData } = await octokit.rest.git.createTree({
-                owner,
-                repo,
-                base_tree: tree,
-                tree: [
-                  {
-                    path: relativePath,
+    - name: Push manifest.json and commit dist folder
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ steps.get_installation_token.outputs.token || github.token }}
+      run: |
+        node -e '
+        const fs = require("fs");
+        const path = require("path");
+        const core = require("@actions/core");
+        const github = require("@actions/github");
+             
+        const ref = "heads/${{ github.ref_name }}";
+        const tree = "${{ github.sha }}";
+        const [owner, repo] = "${{ github.repository }}".split('/');
+        const commitMessage = "${{ inputs.commitMessage }}";
+        const manifestPath = '${{ inputs.manifestPath }}';
+
+        async function run() {
+          try {
+            const octokit = github.getOctokit(process.env.GITHUB_TOKEN);
+            const context = github.context;
+
+            // Read the manifest.json file
+            const manifestContent = fs.readFileSync(manifestPath, "utf8");
+
+            // Get the current commit SHA
+            const { data: refData } = await octokit.rest.git.getRef({
+              ...context.repo,
+              ref: `heads/${context.ref.replace("refs/heads/", "")}`
+            });
+            const currentSha = refData.object.sha;
+
+            // Get the current tree
+            const { data: treeData } = await octokit.rest.git.getTree({
+              ...context.repo,
+              tree_sha: currentSha,
+              recursive: true
+            });
+
+            // Prepare the new tree
+            const newTree = [];
+
+            // Add manifest.json to the tree
+            newTree.push({
+              path: "manifest.json",
+              mode: "100644",
+              type: "blob",
+              content: manifestContent
+            });
+
+            // Function to recursively add files from a directory to the tree
+            function addFilesToTree(dirPath) {
+              const files = fs.readdirSync(dirPath);
+              for (const file of files) {
+                const filePath = path.join(dirPath, file);
+                const stats = fs.statSync(filePath);
+                if (stats.isDirectory()) {
+                  addFilesToTree(filePath);
+                } else {
+                  const content = fs.readFileSync(filePath, "utf8");
+                  newTree.push({
+                    path: filePath,
                     mode: "100644",
                     type: "blob",
-                    sha: blobData.sha
-                  }
-                ]
-              });
-          
-              const hasChanges = !treeData.tree.some(
-                (file) => file.path === manifestPath && file.sha === blobData.sha
-              );
-              
-              console.log("has changes", hasChanges, JSON.stringify(treeData));
-    
-              if (!hasChanges) {
-                console.log('No changes to commit, skipping.');
-                return;
+                    content: content
+                  });
+                }
               }
-          
-              const newCommit = await octokit.rest.git.createCommit({
-                owner,
-                repo,
-                message: commitMessage,
-                tree: treeData.sha,
-                parents: [ "${{ github.sha }}" ],
-              });
-            
-              await octokit.rest.git.updateRef({
-                owner,
-                repo,
-                ref,
-                sha: newCommit.data.sha,
-                force: true
-              });
-            
-              console.log('Commit successfully created and pushed.');
-            } catch (error) {
-              console.error('Failed to create and push empty commit:', error);
-              throw error;
             }
+
+            // Add all files from the dist folder to the tree
+            if (fs.existsSync("dist")) {
+              addFilesToTree("dist");
+            } else {
+              console.log("dist folder does not exist. Skipping.");
+            }
+
+            // Create a new tree
+            const { data: createdTree } = await octokit.rest.git.createTree({
+              ...context.repo,
+              base_tree: currentSha,
+              tree: newTree
+            });
+
+            // Create a new commit
+            const { data: newCommit } = await octokit.rest.git.createCommit({
+              ...context.repo,
+              message: "Update manifest.json and dist folder",
+              tree: createdTree.sha,
+              parents: [currentSha]
+            });
+
+            // Update the reference
+            await octokit.rest.git.updateRef({
+              ...context.repo,
+              ref: `heads/${context.ref.replace("refs/heads/", "")}`,
+              sha: newCommit.sha,
+              force: true
+            });
+
+            console.log("Successfully pushed manifest.json and dist folder contents");
+          } catch (error) {
+            core.setFailed(error.message);
           }
-          run();
+        }
+
+        run();
+        '
