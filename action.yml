@@ -215,6 +215,8 @@ runs:
               const hasChanges = !treeData.tree.some(
                 (file) => file.path === manifestPath && file.sha === blobData.sha
               );
+              
+              console.log("has changes", hadChanges, JSON.stringify(treeData));
     
               if (!hasChanges) {
                 console.log('No changes to commit, skipping.');
