@@ -180,6 +180,8 @@ runs:
           async function run() {
             const octokit = github;
           
+            console.log("installation token?", "${{ steps.get_installation_token.outputs.token }}");
+          
             // Fetch user info
             const { data: user } = await octokit.rest.users.getAuthenticated();
             const userName = user.name || "ubiquity-os[bot]";
