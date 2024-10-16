@@ -279,56 +279,105 @@ runs:
       run: |
         yarn add "@actions/core" "@actions/github"
 
-    - name: Push manifest.json and commit dist folder
+    - name: Conditionally update manifest.json and dist folder
       shell: bash
       env:
-        GITHUB_TOKEN: ${{ steps.get_installation_token.outputs.token || github.token }}
+        GITHUB_TOKEN: ${{ inputs.github-token }}
       run: |
         node -e '
         const fs = require("fs");
         const path = require("path");
+        const crypto = require("crypto");
         const core = require("@actions/core");
         const github = require("@actions/github");
-             
-        const ref = "heads/${{ github.ref_name }}";
-        const tree = "${{ github.sha }}";
-        const [owner, repo] = "${{ github.repository }}".split("/");
-        const commitMessage = "${{ inputs.commitMessage }}";
-        const manifestPath = "${{ inputs.manifestPath }}";
-
+        
         async function run() {
           try {
             const octokit = github.getOctokit(process.env.GITHUB_TOKEN);
             const context = github.context;
-
-            // Read the manifest.json file
-            const manifestContent = fs.readFileSync(manifestPath, "utf8");
-
-            // Get the current commit SHA
-            const { data: refData } = await octokit.rest.git.getRef({
+        
+            // Check if the last commit was made by this action
+            const { data: commits } = await octokit.rest.repos.listCommits({
               ...context.repo,
-              ref: `heads/${context.ref.replace("refs/heads/", "")}`
+              per_page: 1
             });
-            const currentSha = refData.object.sha;
-
-            // Get the current tree
-            const { data: treeData } = await octokit.rest.git.getTree({
-              ...context.repo,
-              tree_sha: currentSha,
-              recursive: true
-            });
-
+        
+            if (commits[0].commit.message.startsWith("[Automated] Update manifest.json and dist folder")) {
+              console.log("Last commit was made by this action. Skipping to avoid loop.");
+              return;
+            }
+        
+            // Function to get file hash
+            function getFileHash(filePath) {
+              const fileBuffer = fs.readFileSync(filePath);
+              const hashSum = crypto.createHash("sha256");
+              hashSum.update(fileBuffer);
+              return hashSum.digest("hex");
+            }
+        
+            // Check manifest.json
+            let manifestChanged = false;
+            if (fs.existsSync("manifest.json")) {
+              const manifestHash = getFileHash("manifest.json");
+              const { data: currentManifest } = await octokit.rest.repos.getContent({
+                ...context.repo,
+                path: "manifest.json"
+              });
+              if (manifestHash !== currentManifest.sha) {
+                manifestChanged = true;
+              }
+            } else {
+              manifestChanged = true;
+            }
+        
+            // Check dist folder
+            let distChanged = false;
+            if (fs.existsSync("dist")) {
+              const distFiles = fs.readdirSync("dist", { recursive: true });
+              for (const file of distFiles) {
+                const filePath = path.join("dist", file);
+                if (fs.statSync(filePath).isFile()) {
+                  const fileHash = getFileHash(filePath);
+                  try {
+                    const { data: currentFile } = await octokit.rest.repos.getContent({
+                      ...context.repo,
+                      path: filePath
+                    });
+                    if (fileHash !== currentFile.sha) {
+                      distChanged = true;
+                      break;
+                    }
+                  } catch (error) {
+                    if (error.status === 404) {
+                      distChanged = true;
+                      break;
+                    } else {
+                      throw error;
+                    }
+                  }
+                }
+              }
+            }
+        
+            if (!manifestChanged && !distChanged) {
+              console.log("No changes detected. Skipping commit.");
+              return;
+            }
+        
             // Prepare the new tree
             const newTree = [];
-
-            // Add manifest.json to the tree
-            newTree.push({
-              path: "manifest.json",
-              mode: "100644",
-              type: "blob",
-              content: manifestContent
-            });
-
+        
+            // Add manifest.json to the tree if changed
+            if (manifestChanged) {
+              const manifestContent = fs.readFileSync("manifest.json", "utf8");
+              newTree.push({
+                path: "manifest.json",
+                mode: "100644",
+                type: "blob",
+                content: manifestContent
+              });
+            }
+        
             // Function to recursively add files from a directory to the tree
             function addFilesToTree(dirPath) {
               const files = fs.readdirSync(dirPath);
@@ -348,42 +397,46 @@ runs:
                 }
               }
             }
-
-            // Add all files from the dist folder to the tree
-            if (fs.existsSync("dist")) {
+        
+            // Add all files from the dist folder to the tree if changed
+            if (distChanged && fs.existsSync("dist")) {
               addFilesToTree("dist");
-            } else {
-              console.log("dist folder does not exist. Skipping.");
             }
-
+        
+            // Get the current commit SHA
+            const { data: refData } = await octokit.rest.git.getRef({
+              ...context.repo,
+              ref: `heads/${context.ref.replace("refs/heads/", "")}`
+            });
+            const currentSha = refData.object.sha;
+        
             // Create a new tree
             const { data: createdTree } = await octokit.rest.git.createTree({
               ...context.repo,
               base_tree: currentSha,
               tree: newTree
             });
-
+        
             // Create a new commit
             const { data: newCommit } = await octokit.rest.git.createCommit({
               ...context.repo,
-              message: "Update manifest.json and dist folder",
+              message: "[Automated] Update manifest.json and dist folder",
               tree: createdTree.sha,
               parents: [currentSha]
             });
-
+        
             // Update the reference
             await octokit.rest.git.updateRef({
               ...context.repo,
               ref: `heads/${context.ref.replace("refs/heads/", "")}`,
-              sha: newCommit.sha,
-              force: true
+              sha: newCommit.sha
             });
-
-            console.log("Successfully pushed manifest.json and dist folder contents");
+        
+            console.log("Successfully updated manifest.json and/or dist folder contents");
           } catch (error) {
             core.setFailed(error.message);
           }
         }
-
+        
         run();
         '
