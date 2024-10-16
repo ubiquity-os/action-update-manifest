@@ -182,7 +182,7 @@ runs:
 
           async function run() {
             const octokit = github;
-            const ref = "${{ github.ref_name }}";
+            const ref = "heads/${{ github.ref_name }}";
             const tree = "${{ github.sha }}";
             const [owner, repo] = "${{ github.repository }}".split('/');
             const commitMessage = "${{ inputs.commitMessage }}";
