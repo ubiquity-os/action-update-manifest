@@ -190,6 +190,33 @@ runs:
           
             try {
               const manifestContent = fs.readFileSync(manifestPath, 'utf8');
+          
+              // Find the existing blob SHA for the manifest file in the current tree
+              const { data: treeData } = await octokit.git.getTree({
+                owner,
+                repo,
+                tree_sha: commitData.tree.sha,
+                recursive: true
+              });
+  
+              const manifestFile = treeData.tree.find(file => file.path === manifestPath);
+  
+              if (manifestFile) {
+                // Get the current content of the manifest file in the repository
+                const { data: blobData } = await octokit.git.getBlob({
+                  owner,
+                  repo,
+                  file_sha: manifestFile.sha
+                });
+                const existingContent = Buffer.from(blobData.content, 'base64').toString('utf8');
+  
+                // Check if the content has changed
+                if (existingContent === manifestContent) {
+                  console.log('No changes to commit');
+                  return;
+                }
+              }
+            
               const { data: blobData } = await octokit.rest.git.createBlob({
                 owner,
                 repo,
