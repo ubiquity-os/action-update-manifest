@@ -32,10 +32,10 @@ runs:
       with:
         node-version: ${{ inputs.nodeVersion }}
 
-#    - name: Install dependencies
-#      shell: bash
-#      run: |
-#        yarn install --immutable --immutable-cache --check-cache
+    - name: Install dependencies
+      shell: bash
+      run: |
+        yarn install --immutable --immutable-cache --check-cache
 #
 #    - name: Build project
 #      shell: bash
@@ -274,12 +274,16 @@ runs:
 #          }
 #          run();
 
+    - name: Install dependencies
+      shell: bash
+      run: |
+        yarn add "@actions/core" "@actions/github"
+
     - name: Push manifest.json and commit dist folder
       shell: bash
       env:
         GITHUB_TOKEN: ${{ steps.get_installation_token.outputs.token || github.token }}
       run: |
-        yarn add "@actions/core" "@actions/github"
         node -e '
         const fs = require("fs");
         const path = require("path");
