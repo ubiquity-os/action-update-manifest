@@ -189,7 +189,6 @@ runs:
             const manifestPath = '${{ inputs.manifestPath }}';
           
             try {
-              // Get the blob for the manifest file
               const manifestContent = fs.readFileSync(manifestPath, 'utf8');
               const { data: blobData } = await octokit.rest.git.createBlob({
                 owner,
@@ -199,7 +198,6 @@ runs:
               });
           
               const relativePath = path.relative(".", manifestPath);
-              // Create a new tree containing the manifest file blob
               const { data: treeData } = await octokit.rest.git.createTree({
                 owner,
                 repo,
@@ -227,6 +225,7 @@ runs:
                 repo,
                 ref,
                 sha: newCommit.data.sha,
+                force: true
               });
             
               console.log('Commit successfully created and pushed.');
