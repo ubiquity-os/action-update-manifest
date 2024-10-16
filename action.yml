@@ -183,15 +183,19 @@ runs:
             console.log("installation token?", "${{ steps.get_installation_token.outputs.token }}");
           
             // Fetch user info
-            const { data: user } = await octokit.rest.users.getAuthenticated();
-            const userName = user.name || "ubiquity-os[bot]";
-            const userEmail = user.email || "ubiquity-os[bot]@users.noreply.github.com";
+            //const { data: user } = await octokit.rest.users.getAuthenticated();
+            //const userName = user.name || "ubiquity-os[bot]";
+            //const userEmail = user.email || "ubiquity-os[bot]@users.noreply.github.com";
           
-            console.log("values", data);
+            //console.log("values", data);
+            const repos = await octokit.rest.repos.listForOrg({
+              org: "Meniole",
+            });
+            console.log(JSON.stringify(repos));
           
             // Configure Git with the retrieved user information
-            await exec('git', ['config', '--global', 'user.name', userName]);
-            await exec('git', ['config', '--global', 'user.email', userEmail]);
+            //await exec('git', ['config', '--global', 'user.name', userName]);
+            //await exec('git', ['config', '--global', 'user.email', userEmail]);
           
             // Set remote URL
             //await exec('git', ['remote', 'set-url', 'origin', `https://x-access-token:${token}@github.com/${github.context.repo.owner}/${github.context.repo.repo}.git`]);
