@@ -194,7 +194,7 @@ runs:
             //console.log(JSON.stringify(repos));
             
             const ref = "${{ github.ref }}";
-            const tree_sha = "${{ github.sha }}";
+            const tree = "${{ github.sha }}";
             const [owner, repo] = "${{ github.repository }}".split('/');
             const commitMessage = 'chore: empty commit to trigger CI';
               
@@ -206,7 +206,7 @@ runs:
                 tree: (await octokit.rest.git.getTree({
                   owner,
                   repo,
-                  tree_sha,
+                  tree,
                 })).data.sha,
                 parents: [ "${{ github.sha }}" ],
               });
