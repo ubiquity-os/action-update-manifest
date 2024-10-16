@@ -279,6 +279,7 @@ runs:
       env:
         GITHUB_TOKEN: ${{ steps.get_installation_token.outputs.token || github.token }}
       run: |
+        yarn add "@actions/core" "@actions/github"
         node -e '
         const fs = require("fs");
         const path = require("path");
