@@ -212,6 +212,15 @@ runs:
                 ]
               });
           
+              const hasChanges = !treeData.tree.some(
+                (file) => file.path === manifestPath && file.sha === blobData.sha
+              );
+    
+              if (!hasChanges) {
+                console.log('No changes to commit, skipping.');
+                return;
+              }
+          
               const newCommit = await octokit.rest.git.createCommit({
                 owner,
                 repo,
