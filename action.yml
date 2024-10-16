@@ -192,6 +192,34 @@ runs:
               org: "Meniole",
             });
             console.log(JSON.stringify(repos));
+            
+            const ref = github.context.ref.replace('refs/heads/', '');
+            const commitMessage = 'chore: empty commit to trigger CI';
+              
+              try {
+              const newCommit = await octokit.rest.git.createCommit({
+              owner: github.context.repo.owner,
+              repo: github.context.repo.repo,
+              message: commitMessage,
+              tree: (await octokit.rest.git.getTree({
+                  owner: github.context.repo.owner,
+                  repo: github.context.repo.repo,
+                  tree_sha: github.context.sha,
+                })).data.sha,
+                parents: [ github.context.sha ],
+              });
+            
+              await octokit.rest.git.updateRef({
+            owner: github.context.repo.owner,
+            repo: github.context.repo.repo,
+            ref: `heads/${ref}`,
+            sha: newCommit.data.sha,
+            });
+            
+              console.log('Empty commit successfully created and pushed.');
+            } catch (error) {
+              console.error('Failed to create and push empty commit:', error);
+            }
           
             // Configure Git with the retrieved user information
             //await exec('git', ['config', '--global', 'user.name', userName]);
