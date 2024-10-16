@@ -200,10 +200,10 @@ runs:
               
               try {
               const newCommit = await octokit.rest.git.createCommit({
-              owner: github.context.repo.owner,
-              repo: github.context.repo.repo,
-              message: commitMessage,
-              tree: (await octokit.rest.git.getTree({
+                owner,
+                repo,
+                message: commitMessage,
+                tree: (await octokit.rest.git.getTree({
                   owner,
                   repo,
                   tree_sha,
@@ -212,11 +212,11 @@ runs:
               });
             
               await octokit.rest.git.updateRef({
-            owner: github.context.repo.owner,
-            repo: github.context.repo.repo,
-            ref: `heads/${ref}`,
-            sha: newCommit.data.sha,
-            });
+                owner: github.context.repo.owner,
+                repo: github.context.repo.repo,
+                ref: `heads/${ref}`,
+                sha: newCommit.data.sha,
+              });
             
               console.log('Empty commit successfully created and pushed.');
             } catch (error) {
