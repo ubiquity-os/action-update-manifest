@@ -188,12 +188,15 @@ runs:
             //const userEmail = user.email || "ubiquity-os[bot]@users.noreply.github.com";
           
             //console.log("values", data);
-            const repos = await octokit.rest.repos.listForOrg({
-              org: "Meniole",
-            });
-            console.log(JSON.stringify(repos));
+            //const repos = await octokit.rest.repos.listForOrg({
+            //  org: "Meniole",
+            //});
+            //console.log(JSON.stringify(repos));
             
-            const ref = github.context.ref.replace('refs/heads/', '');
+            const ref = "${{ github.ref }}";
+            const sha = "${{ github.sha }}";
+            const owner = "${{ github.repository_owner }}"
+            const repo = "${{ github.repository }}".split('/')[1];
             const commitMessage = 'chore: empty commit to trigger CI';
               
               try {
@@ -204,7 +207,7 @@ runs:
               tree: (await octokit.rest.git.getTree({
                   owner: github.context.repo.owner,
                   repo: github.context.repo.repo,
-                  tree_sha: github.context.sha,
+                  tree_sha: sha,
                 })).data.sha,
                 parents: [ github.context.sha ],
               });
