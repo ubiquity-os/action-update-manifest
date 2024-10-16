@@ -178,6 +178,7 @@ runs:
         github-token: ${{ steps.get_installation_token.outputs.token || github.token }}
         script: |
           const fs = require('fs');
+          const path = require('path');
 
           async function run() {
             const octokit = github;
@@ -197,6 +198,7 @@ runs:
                 encoding: "utf-8"
               });
           
+              const relativePath = path.relative(".", manifestPath);
               // Create a new tree containing the manifest file blob
               const { data: treeData } = await octokit.rest.git.createTree({
                 owner,
@@ -204,7 +206,7 @@ runs:
                 base_tree: tree,
                 tree: [
                   {
-                    path: manifestPath,
+                    path: relativePath,
                     mode: "100644",
                     type: "blob",
                     sha: blobData.sha
