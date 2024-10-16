@@ -179,35 +179,42 @@ runs:
         script: |          
           async function run() {
             const octokit = github;
-          
-            console.log("installation token?", "${{ steps.get_installation_token.outputs.token }}");
-          
-            // Fetch user info
-            //const { data: user } = await octokit.rest.users.getAuthenticated();
-            //const userName = user.name || "ubiquity-os[bot]";
-            //const userEmail = user.email || "ubiquity-os[bot]@users.noreply.github.com";
-          
-            //console.log("values", data);
-            //const repos = await octokit.rest.repos.listForOrg({
-            //  org: "Meniole",
-            //});
-            //console.log(JSON.stringify(repos));
-            
             const ref = "${{ github.ref }}";
             const tree = "${{ github.sha }}";
             const [owner, repo] = "${{ github.repository }}".split('/');
-            const commitMessage = 'chore: empty commit to trigger CI';
-              
-              try {
+            const commitMessage = "${{ inputs.commitMessage }}";
+            const manifestPath = '${{ inputs.manifestPath }}';
+          
+            try {
+              // Get the blob for the manifest file
+              const manifestContent = fs.readFileSync(manifestPath, 'utf8');
+              const { data: blobData } = await octokit.git.createBlob({
+                owner,
+                repo,
+                content: manifestContent,
+                encoding: "utf-8"
+              });
+          
+              // Create a new tree containing the manifest file blob
+              const { data: treeData } = await octokit.git.createTree({
+                owner,
+                repo,
+                base_tree: tree,
+                tree: [
+                  {
+                    path: manifestPath,
+                    mode: "100644",
+                    type: "blob",
+                    sha: blobData.sha
+                  }
+                ]
+              });
+          
               const newCommit = await octokit.rest.git.createCommit({
                 owner,
                 repo,
                 message: commitMessage,
-                tree: (await octokit.rest.git.getTree({
-                  owner,
-                  repo,
-                  tree,
-                })).data.sha,
+                tree: treeData.sha,
                 parents: [ "${{ github.sha }}" ],
               });
             
@@ -222,46 +229,5 @@ runs:
             } catch (error) {
               console.error('Failed to create and push empty commit:', error);
             }
-          
-            // Configure Git with the retrieved user information
-            //await exec('git', ['config', '--global', 'user.name', userName]);
-            //await exec('git', ['config', '--global', 'user.email', userEmail]);
-          
-            // Set remote URL
-            //await exec('git', ['remote', 'set-url', 'origin', `https://x-access-token:${token}@github.com/${github.context.repo.owner}/${github.context.repo.repo}.git`]);
-          
-            // Add files to commit
-            await exec('git', ['add', core.getInput('manifestPath')]);
-            await exec('git', ['add', '-f', `${github.context.workspace}/dist/*`]);
-          
-            // Check if there are changes to commit
-            let changes = '';
-            await exec('git', ['diff-index', '--cached', '--name-only', 'HEAD'], [], {
-              listeners: {
-                stdout: (data) => {
-                  changes += data.toString();
-                }
-              }
-            });
-          
-            if (changes.trim()) {
-              try {
-                await exec('git', ['commit', '-m', core.getInput('commitMessage')]);
-                try {
-                  // Attempt to pull and resolve conflicts
-                  await exec('git', ['pull', 'origin', github.context.ref.replace('refs/heads/', '')]);
-                } catch (error) {
-                  console.log('Rebase failed, force pushing changes.');
-                  await exec('git', ['push', '--force', 'origin', `HEAD:${github.context.ref.replace('refs/heads/', '')}`]);
-                  return;
-                }
-                await exec('git', ['push', 'origin', `HEAD:${github.context.ref.replace('refs/heads/', '')}`]);
-              } catch (error) {
-                console.log('Commit failed');
-              }
-            } else {
-              console.log('No changes to commit');
-            }
-          }
           
           run();
