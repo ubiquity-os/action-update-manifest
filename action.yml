@@ -155,7 +155,7 @@ runs:
         git config --global user.name "$user_name"
         git config --global user.email "$user_email"
         # git remote set-url origin https://${{ env.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
-        git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
+        git remote set-url origin https://x-access-token:${{ env.GITHUB_TOKEN }}@github.com/${{ github.repository }}
         
         git add "${{ inputs.manifestPath }}"
         git add -f ${{ github.workspace }}/dist/\*
