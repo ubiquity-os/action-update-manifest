@@ -223,13 +223,13 @@ runs:
               });
             
               await octokit.rest.git.updateRef({
-                owner: github.context.repo.owner,
-                repo: github.context.repo.repo,
-                ref: `heads/${ref}`,
+                owner,
+                repo,
+                ref,
                 sha: newCommit.data.sha,
               });
             
-              console.log('Empty commit successfully created and pushed.');
+              console.log('Commit successfully created and pushed.');
             } catch (error) {
               console.error('Failed to create and push empty commit:', error);
               throw error;
