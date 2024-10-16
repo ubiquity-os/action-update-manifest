@@ -287,7 +287,7 @@ runs:
              
         const ref = "heads/${{ github.ref_name }}";
         const tree = "${{ github.sha }}";
-        const [owner, repo] = "${{ github.repository }}".split('/');
+        const [owner, repo] = "${{ github.repository }}".split("/");
         const commitMessage = "${{ inputs.commitMessage }}";
         const manifestPath = '${{ inputs.manifestPath }}';
 
