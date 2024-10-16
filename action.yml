@@ -190,7 +190,7 @@ runs:
             try {
               // Get the blob for the manifest file
               const manifestContent = fs.readFileSync(manifestPath, 'utf8');
-              const { data: blobData } = await octokit.git.createBlob({
+              const { data: blobData } = await octokit.rest.git.createBlob({
                 owner,
                 repo,
                 content: manifestContent,
@@ -198,7 +198,7 @@ runs:
               });
           
               // Create a new tree containing the manifest file blob
-              const { data: treeData } = await octokit.git.createTree({
+              const { data: treeData } = await octokit.rest.git.createTree({
                 owner,
                 repo,
                 base_tree: tree,
@@ -230,6 +230,7 @@ runs:
               console.log('Empty commit successfully created and pushed.');
             } catch (error) {
               console.error('Failed to create and push empty commit:', error);
+              throw error;
             }
           }
           run();
