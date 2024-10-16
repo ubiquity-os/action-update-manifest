@@ -289,7 +289,7 @@ runs:
         const tree = "${{ github.sha }}";
         const [owner, repo] = "${{ github.repository }}".split("/");
         const commitMessage = "${{ inputs.commitMessage }}";
-        const manifestPath = '${{ inputs.manifestPath }}';
+        const manifestPath = "${{ inputs.manifestPath }}";
 
         async function run() {
           try {
