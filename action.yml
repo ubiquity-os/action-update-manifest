@@ -229,5 +229,5 @@ runs:
             } catch (error) {
               console.error('Failed to create and push empty commit:', error);
             }
-          
+          }
           run();
