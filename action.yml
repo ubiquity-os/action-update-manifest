@@ -151,7 +151,7 @@ runs:
           node -e "
             const fs = require('fs');
             const path = require("path");
-            const manifestPath = path.relative(".", "${{ inputs.manifestPath }}");
+            const manifestPath = path.relative('.', '${{ inputs.manifestPath }}');
 
             async function pushChanges() {
               const octokit = github.getOctokit(process.env.GITHUB_TOKEN);
