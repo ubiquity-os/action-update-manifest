@@ -188,7 +188,7 @@ runs:
                   ],
                 });
 
-                const newCommit = await octokit.git.createCommit({
+                const newCommit = await octokit.git.rest.createCommit({
                   owner,
                   repo,
                   message: '${{ inputs.commitMessage }}',
@@ -196,7 +196,7 @@ runs:
                   parents: [currentCommit.data.object.sha]
                 });
 
-                await octokit.git.updateRef({
+                await octokit.rest.git.updateRef({
                   owner,
                   repo,
                   ref,
