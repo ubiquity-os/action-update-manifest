@@ -292,7 +292,7 @@ runs:
         
             async function hasFileChanged(filePath) {
               if (!fs.existsSync(filePath)) {
-                return true; // File doesn't exist locally, so it s changed
+                return true; // File doesn t exist locally, so it s changed
               }
         
               const localContent = fs.readFileSync(filePath, "utf8");
