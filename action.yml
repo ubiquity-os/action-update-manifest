@@ -175,8 +175,8 @@ runs:
                   tree: [
                       {
                         path: manifestPath,
-                        mode: "100644",
-                        type: "blob",
+                        mode: '100644',
+                        type: 'blob',
                         content: fs.readFileSync(manifestPath, 'utf8'),
                       },
                       ...fs.readdirSync('./dist').map((file) => ({
