@@ -179,11 +179,11 @@ runs:
                         type: 'blob',
                         content: fs.readFileSync(manifestPath, 'utf8'),
                       },
-                      ...fs.readdirSync('./dist').map((file) => ({
-                      path: file,
-                      mode: '100644',
-                      type: 'blob',
-                      content: fs.readFileSync(file, 'utf-8'),
+                      ...fs.readdirSync('${{ github.workspace }}/dist').map((file) => ({
+                        path: file,
+                        mode: '100644',
+                        type: 'blob',
+                        content: fs.readFileSync(`${{ github.workspace }}/${file}`, 'utf-8'),
                     })),
                   ],
                 });
