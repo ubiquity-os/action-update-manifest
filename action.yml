@@ -134,18 +134,19 @@ runs:
         app_id: ${{ env.APP_ID }}
         private_key: ${{ env.APP_PRIVATE_KEY }}
 
-    - name: Install dependencies
+    - name: Install dependencies for GitHub Auth
       shell: bash
       run: |
-        yarn add "@actions/core" "@actions/github"
+        yarn add "@actions/github"
 
-    - name: Conditionally update manifest.json and dist folder
+    - name: Update manifest.json and dist folder
       shell: bash
       env:
         GITHUB_TOKEN: ${{ steps.get_installation_token.outputs.token || github.token }}
       run: |
         git add "${{ inputs.manifestPath }}"
         git add -f ${{ github.workspace }}/dist/\*
+        echo "Changed files:"
         echo "$(git diff-index --cached --name-only HEAD)"
         if [ -n "$(git diff-index --cached --name-only HEAD)" ]; then
           node -e "
