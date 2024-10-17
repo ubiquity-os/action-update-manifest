@@ -282,7 +282,7 @@ runs:
     - name: Conditionally update manifest.json and dist folder
       shell: bash
       env:
-        GITHUB_TOKEN: ${{ inputs.github-token }}
+        GITHUB_TOKEN: ${{ steps.get_installation_token.outputs.token || github.token }}
       run: |
         node -e '
         const fs = require("fs");
