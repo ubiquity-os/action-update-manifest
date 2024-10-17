@@ -177,13 +177,13 @@ runs:
                         path: manifestPath,
                         mode: "100644",
                         type: "blob",
-                        content: fs.readFileSync(manifestPath, "utf8"),
+                        content: fs.readFileSync(manifestPath, 'utf8'),
                       },
-                      ...fs.readdirSync("./dist").map((file) => ({
+                      ...fs.readdirSync('./dist').map((file) => ({
                       path: file,
-                      mode: "100644",
-                      type: "blob",
-                      content: fs.readFileSync(file, "utf-8"),
+                      mode: '100644',
+                      type: 'blob',
+                      content: fs.readFileSync(file, 'utf-8'),
                     })),
                   ],
                 });
