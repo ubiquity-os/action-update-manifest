@@ -147,10 +147,9 @@ runs:
         git add "${{ inputs.manifestPath }}"
         git add -f ${{ github.workspace }}/dist/\*
         if [ -n "$(git diff-index --cached --name-only HEAD)" ]; then
-          git commit -m "${{ inputs.commitMessage }}" || echo "Commit failed"
           node -e "
             const fs = require('fs');
-            const path = require("path");
+            const path = require('path');
             const manifestPath = path.relative('.', '${{ inputs.manifestPath }}');
 
             async function pushChanges() {
