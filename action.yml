@@ -144,133 +144,65 @@ runs:
       env:
         GITHUB_TOKEN: ${{ steps.get_installation_token.outputs.token || github.token }}
       run: |
-        node -e '
-        const fs = require("fs");
-        const path = require("path");
-        const core = require("@actions/core");
-        const dotenv = require("dotenv");
-        const github = require("@actions/github");
-        const commitMessage = "${{ inputs.commitMessage }}";
-        async function run() {
-          try {
-            const octokit = github.getOctokit(process.env.GITHUB_TOKEN);
-            const context = github.context;
+        git add "${{ inputs.manifestPath }}"
+        git add -f ${{ github.workspace }}/dist/\*
+        if [ -n "$(git diff-index --cached --name-only HEAD)" ]; then
+          git commit -m "${{ inputs.commitMessage }}" || echo "Commit failed"
+          node -e "
+            const fs = require('fs');
+
+            async function pushChanges() {
+              const octokit = github.getOctokit(process.env.GITHUB_TOKEN);
         
-            async function hasFileChanged(filePath) {
-              if (!fs.existsSync(filePath)) {
-                return true; // File doesn t exist locally, so it s changed
-              }
+              const context = github.context;
+              const owner = context.repo.owner;
+              const repo = context.repo.repo;
+              const ref = 'heads/${{ github.ref_name }}';
         
-              const localContent = fs.readFileSync(filePath, "utf8");
               try {
-                const { data: repoFile } = await octokit.rest.repos.getContent({
-                  ...context.repo,
-                  path: filePath,
+                const currentCommit = await octokit.rest.git.getRef({
+                  owner,
+                  repo,
+                  ref
                 });
-                const repoContent = Buffer.from(repoFile.content, "base64").toString(
-                  "utf8",
-                );
-                return localContent !== repoContent;
+        
+                const newTree = await octokit.rest.git.createTree({
+                  owner,
+                  repo,
+                  base_tree: currentCommit.data.object.sha,
+                  tree: fs.readdirSync('./dist').map(file => ({
+                    path: file,
+                    mode: '100644',
+                    type: 'blob',
+                    content: fs.readFileSync(file, 'utf-8')
+                  }))
+                });
+        
+                const newCommit = await octokit.git.createCommit({
+                  owner,
+                  repo,
+                  message: '${{ inputs.commitMessage }}',
+                  tree: newTree.data.sha,
+                  parents: [currentCommit.data.object.sha]
+                });
+        
+                await octokit.git.updateRef({
+                  owner,
+                  repo,
+                  ref,
+                  sha: newCommit.data.sha,
+                  force: true
+                });
+        
+                console.log('Changes pushed successfully');
               } catch (error) {
-                if (error.status === 404) {
-                  return true; // File doesn t exist in repo, so it s changed
-                }
-                throw error;
+                console.error('Error pushing changes:', error);
+                process.exit(1);
               }
             }
         
-            const manifestChanged = await hasFileChanged("manifest.json");
-        
-            let distChanged = false;
-            if (fs.existsSync("dist")) {
-              const distFiles = fs.readdirSync("dist", { recursive: true });
-              for (const file of distFiles) {
-                const filePath = path.join("dist", file);
-                if (fs.statSync(filePath).isFile()) {
-                  if (await hasFileChanged(filePath)) {
-                    distChanged = true;
-                    break;
-                  }
-                }
-              }
-            }
-        
-            if (!manifestChanged && !distChanged) {
-              console.log("No changes detected. Skipping commit.");
-              return;
-            }
-        
-            const newTree = [];
-        
-            if (manifestChanged) {
-              console.log("Manifest changed, will commit");
-              const manifestContent = fs.readFileSync("manifest.json", "utf8");
-              newTree.push({
-                path: "manifest.json",
-                mode: "100644",
-                type: "blob",
-                content: manifestContent,
-              });
-            }
-        
-            // Function to recursively add files from a directory to the tree
-            function addFilesToTree(dirPath) {
-              const files = fs.readdirSync(dirPath);
-              for (const file of files) {
-                const filePath = path.join(dirPath, file);
-                const stats = fs.statSync(filePath);
-                if (stats.isDirectory()) {
-                  addFilesToTree(filePath);
-                } else {
-                  const content = fs.readFileSync(filePath, "utf8");
-                  newTree.push({
-                    path: filePath,
-                    mode: "100644",
-                    type: "blob",
-                    content: content,
-                  });
-                }
-              }
-            }
-        
-            if (distChanged && fs.existsSync("dist")) {
-              console.log("Dist changed, will commit");
-              addFilesToTree("dist");
-            }
-        
-            const { data: refData } = await octokit.rest.git.getRef({
-              ...context.repo,
-              ref: `heads/${context.ref.replace("refs/heads/", "")}`,
-            });
-            const currentSha = refData.object.sha;
-        
-            const { data: createdTree } = await octokit.rest.git.createTree({
-              ...context.repo,
-              base_tree: currentSha,
-              tree: newTree,
-            });
-        
-            // Create a new commit
-            const { data: newCommit } = await octokit.rest.git.createCommit({
-              ...context.repo,
-              message: commitMessage,
-              tree: createdTree.sha,
-              parents: [currentSha],
-            });
-        
-            await octokit.rest.git.updateRef({
-                ...context.repo,
-                ref: `heads/${context.ref.replace("refs/heads/", "")}`,
-                sha: newCommit.sha
-            });
-        
-            console.log(
-              "Successfully updated manifest.json and/or dist folder contents",
-            );
-          } catch (error) {
-            core.setFailed(error.message);
-          }
-        }
-        
-        run();
-        '
+            pushChanges();
+          "
+        else
+          echo "No changes to commit"
+        fi
