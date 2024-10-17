@@ -285,6 +285,12 @@ runs:
         GITHUB_TOKEN: ${{ steps.get_installation_token.outputs.token || github.token }}
       run: |
         node -e '
+        const fs = require("fs");
+        const path = require("path");
+        const core = require("@actions/core");
+        const dotenv = require("dotenv");
+        const github = require("@actions/github");
+        const commitMessage = "${{ inputs.commitMessage }}";
         async function run() {
           try {
             const octokit = github.getOctokit(process.env.GITHUB_TOKEN);
