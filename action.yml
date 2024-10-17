@@ -285,65 +285,45 @@ runs:
         GITHUB_TOKEN: ${{ steps.get_installation_token.outputs.token || github.token }}
       run: |
         node -e '
-        const fs = require("fs");
-        const path = require("path");
-        const crypto = require("crypto");
-        const core = require("@actions/core");
-        const github = require("@actions/github");
-        const commitMessage = "${{ inputs.commitMessage }}";
-
         async function run() {
           try {
             const octokit = github.getOctokit(process.env.GITHUB_TOKEN);
             const context = github.context;
         
-            // Function to get file hash
-            function getFileHash(filePath) {
-              const fileBuffer = fs.readFileSync(filePath);
-              const hashSum = crypto.createHash("sha256");
-              hashSum.update(fileBuffer);
-              return hashSum.digest("hex");
-            }
-        
-            // Check manifest.json
-            let manifestChanged = false;
-            if (fs.existsSync("manifest.json")) {
-              const manifestHash = getFileHash("manifest.json");
-              const { data: currentManifest } = await octokit.rest.repos.getContent({
-                ...context.repo,
-                path: "manifest.json"
-              });
-              if (manifestHash !== currentManifest.sha) {
-                manifestChanged = true;
+            async function hasFileChanged(filePath) {
+              if (!fs.existsSync(filePath)) {
+                return true; // File doesn't exist locally, so it's changed
               }
-            } else {
-              manifestChanged = true;
+        
+              const localContent = fs.readFileSync(filePath, "utf8");
+              try {
+                const { data: repoFile } = await octokit.rest.repos.getContent({
+                  ...context.repo,
+                  path: filePath,
+                });
+                const repoContent = Buffer.from(repoFile.content, "base64").toString(
+                  "utf8",
+                );
+                return localContent !== repoContent;
+              } catch (error) {
+                if (error.status === 404) {
+                  return true; // File doesn't exist in repo, so it's changed
+                }
+                throw error;
+              }
             }
         
-            // Check dist folder
+            const manifestChanged = await hasFileChanged("manifest.json");
+        
             let distChanged = false;
             if (fs.existsSync("dist")) {
               const distFiles = fs.readdirSync("dist", { recursive: true });
               for (const file of distFiles) {
                 const filePath = path.join("dist", file);
                 if (fs.statSync(filePath).isFile()) {
-                  const fileHash = getFileHash(filePath);
-                  try {
-                    const { data: currentFile } = await octokit.rest.repos.getContent({
-                      ...context.repo,
-                      path: filePath
-                    });
-                    if (fileHash !== currentFile.sha) {
-                      distChanged = true;
-                      break;
-                    }
-                  } catch (error) {
-                    if (error.status === 404) {
-                      distChanged = true;
-                      break;
-                    } else {
-                      throw error;
-                    }
+                  if (await hasFileChanged(filePath)) {
+                    distChanged = true;
+                    break;
                   }
                 }
               }
@@ -354,10 +334,8 @@ runs:
               return;
             }
         
-            // Prepare the new tree
             const newTree = [];
         
-            // Add manifest.json to the tree if changed
             if (manifestChanged) {
               console.log("Manifest changed, will commit");
               const manifestContent = fs.readFileSync("manifest.json", "utf8");
@@ -365,7 +343,7 @@ runs:
                 path: "manifest.json",
                 mode: "100644",
                 type: "blob",
-                content: manifestContent
+                content: manifestContent,
               });
             }
         
@@ -383,30 +361,27 @@ runs:
                     path: filePath,
                     mode: "100644",
                     type: "blob",
-                    content: content
+                    content: content,
                   });
                 }
               }
             }
         
-            // Add all files from the dist folder to the tree if changed
             if (distChanged && fs.existsSync("dist")) {
               console.log("Dist changed, will commit");
               addFilesToTree("dist");
             }
         
-            // Get the current commit SHA
             const { data: refData } = await octokit.rest.git.getRef({
               ...context.repo,
-              ref: `heads/${context.ref.replace("refs/heads/", "")}`
+              ref: `heads/${context.ref.replace("refs/heads/", "")}`,
             });
             const currentSha = refData.object.sha;
         
-            // Create a new tree
             const { data: createdTree } = await octokit.rest.git.createTree({
               ...context.repo,
               base_tree: currentSha,
-              tree: newTree
+              tree: newTree,
             });
         
             // Create a new commit
@@ -414,17 +389,18 @@ runs:
               ...context.repo,
               message: commitMessage,
               tree: createdTree.sha,
-              parents: [currentSha]
+              parents: [currentSha],
             });
         
-            // Update the reference
             await octokit.rest.git.updateRef({
-              ...context.repo,
-              ref: `heads/${context.ref.replace("refs/heads/", "")}`,
-              sha: newCommit.sha
+                ...context.repo,
+                ref: `heads/${context.ref.replace("refs/heads/", "")}`,
+                sha: newCommit.sha
             });
         
-            console.log("Successfully updated manifest.json and/or dist folder contents");
+            console.log(
+              "Successfully updated manifest.json and/or dist folder contents",
+            );
           } catch (error) {
             core.setFailed(error.message);
           }
