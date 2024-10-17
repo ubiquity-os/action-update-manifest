@@ -290,7 +290,8 @@ runs:
         const crypto = require("crypto");
         const core = require("@actions/core");
         const github = require("@actions/github");
-        
+        const commitMessage = "${{ inputs.commitMessage }}";
+
         async function run() {
           try {
             const octokit = github.getOctokit(process.env.GITHUB_TOKEN);
@@ -358,6 +359,7 @@ runs:
         
             // Add manifest.json to the tree if changed
             if (manifestChanged) {
+              console.log("Manifest changed, will commit");
               const manifestContent = fs.readFileSync("manifest.json", "utf8");
               newTree.push({
                 path: "manifest.json",
@@ -389,6 +391,7 @@ runs:
         
             // Add all files from the dist folder to the tree if changed
             if (distChanged && fs.existsSync("dist")) {
+              console.log("Dist changed, will commit");
               addFilesToTree("dist");
             }
         
@@ -409,7 +412,7 @@ runs:
             // Create a new commit
             const { data: newCommit } = await octokit.rest.git.createCommit({
               ...context.repo,
-              message: "[Automated] Update manifest.json and dist folder",
+              message: commitMessage,
               tree: createdTree.sha,
               parents: [currentSha]
             });
