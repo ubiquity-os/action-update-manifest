@@ -183,7 +183,7 @@ runs:
                         path: file,
                         mode: '100644',
                         type: 'blob',
-                        content: fs.readFileSync(`${{ github.workspace }}/${file}`, 'utf-8'),
+                        content: fs.readFileSync('${{ github.workspace }}/' + file, 'utf-8'),
                     })),
                   ],
                 });
