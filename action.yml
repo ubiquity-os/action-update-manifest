@@ -174,18 +174,25 @@ runs:
                   repo,
                   base_tree: currentCommit.data.object.sha,
                   tree: [
-                      {
-                        path: manifestPath,
+                    {
+                      path: manifestPath,
+                      mode: '100644',
+                      type: 'blob',
+                      content: fs.readFileSync(manifestPath, 'utf8'),
+                    },
+                    ...fs.readdirSync('${{ github.workspace }}/dist').map((file) => {
+                        const path = path.relative('.', '${{ github.workspace }}/dist/' + file);
+                        console.log('Adding dist file at path', path);
+                        return {
+                        path: path,
                         mode: '100644',
                         type: 'blob',
-                        content: fs.readFileSync(manifestPath, 'utf8'),
-                      },
-                      ...fs.readdirSync('${{ github.workspace }}/dist').map((file) => ({
-                        path: file,
-                        mode: '100644',
-                        type: 'blob',
-                        content: fs.readFileSync('${{ github.workspace }}/dist/' + file, 'utf-8'),
-                    })),
+                        content: fs.readFileSync(
+                        '${{ github.workspace }}/dist/' + file,
+                        'utf-8',
+                      ),
+                    };
+                    }),
                   ],
                 });
 
