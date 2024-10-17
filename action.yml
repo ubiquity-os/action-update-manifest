@@ -292,7 +292,7 @@ runs:
         
             async function hasFileChanged(filePath) {
               if (!fs.existsSync(filePath)) {
-                return true; // File doesn't exist locally, so it's changed
+                return true; // File doesn't exist locally, so it s changed
               }
         
               const localContent = fs.readFileSync(filePath, "utf8");
@@ -307,7 +307,7 @@ runs:
                 return localContent !== repoContent;
               } catch (error) {
                 if (error.status === 404) {
-                  return true; // File doesn't exist in repo, so it's changed
+                  return true; // File doesn t exist in repo, so it s changed
                 }
                 throw error;
               }
