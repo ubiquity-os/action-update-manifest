@@ -150,34 +150,44 @@ runs:
           git commit -m "${{ inputs.commitMessage }}" || echo "Commit failed"
           node -e "
             const fs = require('fs');
+            const path = require("path");
+            const manifestPath = path.relative(".", "${{ inputs.manifestPath }}");
 
             async function pushChanges() {
               const octokit = github.getOctokit(process.env.GITHUB_TOKEN);
-        
+
               const context = github.context;
               const owner = context.repo.owner;
               const repo = context.repo.repo;
               const ref = 'heads/${{ github.ref_name }}';
-        
+
               try {
                 const currentCommit = await octokit.rest.git.getRef({
                   owner,
                   repo,
                   ref
                 });
-        
+
                 const newTree = await octokit.rest.git.createTree({
                   owner,
                   repo,
                   base_tree: currentCommit.data.object.sha,
-                  tree: fs.readdirSync('./dist').map(file => ({
-                    path: file,
-                    mode: '100644',
-                    type: 'blob',
-                    content: fs.readFileSync(file, 'utf-8')
-                  }))
+                  tree: [
+                      {
+                        path: manifestPath,
+                        mode: "100644",
+                        type: "blob",
+                        content: fs.readFileSync(manifestPath, "utf8"),
+                      },
+                      ...fs.readdirSync("./dist").map((file) => ({
+                      path: file,
+                      mode: "100644",
+                      type: "blob",
+                      content: fs.readFileSync(file, "utf-8"),
+                    })),
+                  ],
                 });
-        
+
                 const newCommit = await octokit.git.createCommit({
                   owner,
                   repo,
@@ -185,7 +195,7 @@ runs:
                   tree: newTree.data.sha,
                   parents: [currentCommit.data.object.sha]
                 });
-        
+
                 await octokit.git.updateRef({
                   owner,
                   repo,
@@ -193,14 +203,14 @@ runs:
                   sha: newCommit.data.sha,
                   force: true
                 });
-        
+
                 console.log('Changes pushed successfully');
               } catch (error) {
                 console.error('Error pushing changes:', error);
                 process.exit(1);
               }
             }
-        
+
             pushChanges();
           "
         else
