@@ -36,95 +36,95 @@ runs:
       shell: bash
       run: |
         yarn install --immutable --immutable-cache --check-cache
-#
-#    - name: Build project
-#      shell: bash
-#      run: |
-#        yarn add -DE @vercel/ncc
-#        echo "Compiling plugin..."
-#        yarn ncc build --minify ${{ inputs.pluginEntry }} -m -o dist
-#        echo "Compiling plugin types..."
-#        yarn ncc build ${{ inputs.schemaPath }} -m -o plugin
-#
-#    - name: Update manifest configuration JSON
-#      uses: actions/github-script@v7
-#      with:
-#        script: |
-#          const fs = require('fs').promises;
-#          const path = require('path');
-#
-#          async function updateManifest() {
-#            const manifestPath = '${{ inputs.manifestPath }}';
-#            const pluginPath = path.resolve('${{ github.workspace }}', 'plugin', 'index.js');
-#
-#            let pluginSettingsSchema;
-#            try {
-#              // First, try to load as ESM
-#              try {
-#                const pluginModule = await import(`file://${pluginPath}`);
-#                pluginSettingsSchema = pluginModule.pluginSettingsSchema;
-#
-#                if (!pluginSettingsSchema) {
-#                  throw new Error('pluginSettingsSchema not found in the ESM module');
-#                }
-#              } catch (esmError) {
-#                // If ESM import fails, try loading as CJS
-#                try {
-#                  const pluginModule = require(pluginPath);
-#                  pluginSettingsSchema = pluginModule.pluginSettingsSchema;
-#
-#                  if (!pluginSettingsSchema) {
-#                    throw new Error('pluginSettingsSchema not found in the CJS module');
-#                  }
-#                } catch (cjsError) {
-#                  console.error('Error loading module as ESM and CJS:', esmError, cjsError);
-#                  process.exit(1);
-#                }
-#              }
-#            } catch (error) {
-#              console.error('Error loading module:', error);
-#              process.exit(1);
-#            }
-#
-#            const manifest = JSON.parse(await fs.readFile(manifestPath, 'utf8'));
-#            manifest["configuration"] = pluginSettingsSchema;
-#
-#            function customReviver(key, value) {
-#              if (typeof value === "object" && value !== null) {
-#                if ("properties" in value && "required" in value) {
-#                  const requiredFields = new Set(value.required);
-#                  for (const [propKey, propValue] of Object.entries(value.properties)) {
-#                    if (typeof propValue === 'object' && 'default' in propValue) {
-#                      requiredFields.delete(propKey);
-#                    }
-#                  }
-#                  value.required = Array.from(requiredFields);
-#                  if (value.required.length === 0) {
-#                    delete value.required;
-#                  }
-#                }
-#
-#                // Recursively apply to nested objects and arrays
-#                if (Array.isArray(value)) {
-#                  return value.map(item => JSON.parse(JSON.stringify(item), customReviver));
-#                } else {
-#                  return Object.fromEntries(
-#                    Object.entries(value).map(([k, v]) => [k, JSON.parse(JSON.stringify(v), customReviver)])
-#                  );
-#                }
-#              }
-#              return value;
-#            }
-#
-#            const updatedManifest = JSON.stringify(manifest, customReviver, 2);
-#            await fs.writeFile(manifestPath, updatedManifest, 'utf8');
-#          }
-#
-#    - name: Format manifest using Prettier
-#      shell: bash
-#      run: |
-#        yarn add -DE prettier
-#        yarn prettier --write .
+
+    - name: Build project
+      shell: bash
+      run: |
+        yarn add -DE @vercel/ncc
+        echo "Compiling plugin..."
+        yarn ncc build --minify ${{ inputs.pluginEntry }} -m -o dist
+        echo "Compiling plugin types..."
+        yarn ncc build ${{ inputs.schemaPath }} -m -o plugin
+
+    - name: Update manifest configuration JSON
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs').promises;
+          const path = require('path');
+
+          async function updateManifest() {
+            const manifestPath = '${{ inputs.manifestPath }}';
+            const pluginPath = path.resolve('${{ github.workspace }}', 'plugin', 'index.js');
+
+            let pluginSettingsSchema;
+            try {
+              // First, try to load as ESM
+              try {
+                const pluginModule = await import(`file://${pluginPath}`);
+                pluginSettingsSchema = pluginModule.pluginSettingsSchema;
+
+                if (!pluginSettingsSchema) {
+                  throw new Error('pluginSettingsSchema not found in the ESM module');
+                }
+              } catch (esmError) {
+                // If ESM import fails, try loading as CJS
+                try {
+                  const pluginModule = require(pluginPath);
+                  pluginSettingsSchema = pluginModule.pluginSettingsSchema;
+
+                  if (!pluginSettingsSchema) {
+                    throw new Error('pluginSettingsSchema not found in the CJS module');
+                  }
+                } catch (cjsError) {
+                  console.error('Error loading module as ESM and CJS:', esmError, cjsError);
+                  process.exit(1);
+                }
+              }
+            } catch (error) {
+              console.error('Error loading module:', error);
+              process.exit(1);
+            }
+
+            const manifest = JSON.parse(await fs.readFile(manifestPath, 'utf8'));
+            manifest["configuration"] = pluginSettingsSchema;
+
+            function customReviver(key, value) {
+              if (typeof value === "object" && value !== null) {
+                if ("properties" in value && "required" in value) {
+                  const requiredFields = new Set(value.required);
+                  for (const [propKey, propValue] of Object.entries(value.properties)) {
+                    if (typeof propValue === 'object' && 'default' in propValue) {
+                      requiredFields.delete(propKey);
+                    }
+                  }
+                  value.required = Array.from(requiredFields);
+                  if (value.required.length === 0) {
+                    delete value.required;
+                  }
+                }
+
+                // Recursively apply to nested objects and arrays
+                if (Array.isArray(value)) {
+                  return value.map(item => JSON.parse(JSON.stringify(item), customReviver));
+                } else {
+                  return Object.fromEntries(
+                    Object.entries(value).map(([k, v]) => [k, JSON.parse(JSON.stringify(v), customReviver)])
+                  );
+                }
+              }
+              return value;
+            }
+
+            const updatedManifest = JSON.stringify(manifest, customReviver, 2);
+            await fs.writeFile(manifestPath, updatedManifest, 'utf8');
+          }
+
+    - name: Format manifest using Prettier
+      shell: bash
+      run: |
+        yarn add -DE prettier
+        yarn prettier --write .
 
     - name: Get GitHub App token
       if: env.APP_ID != '' && env.APP_PRIVATE_KEY != ''
@@ -133,146 +133,6 @@ runs:
       with:
         app_id: ${{ env.APP_ID }}
         private_key: ${{ env.APP_PRIVATE_KEY }}
-
-#    - name: Commit and Push changes
-#      shell: bash
-#      env:
-#        GITHUB_TOKEN: ${{ steps.get_installation_token.outputs.token || github.token }}
-#      run: |
-#        app_token="${{ steps.get_installation_token.outputs.token }}" # Assuming this outputs your app token
-#
-#        user_info=$(curl -s -H "Authorization: token $app_token" https://api.github.com/user)
-#
-#        user_name=$(echo "$user_info" | jq -r .name)
-#        user_email=$(echo "$user_info" | jq -r .email)
-#
-#        if [ "$user_email" == "null" ]; then
-#          user_email="ubiquity-os[bot]@users.noreply.github.com"
-#          user_name="ubiquity-os[bot]"
-#        fi
-#
-#        # Configure Git with the retrieved user information
-#        git config --global user.name "$user_name"
-#        git config --global user.email "$user_email"
-#        # git remote set-url origin https://${{ env.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
-#        git remote set-url origin https://x-access-token:${{ env.GITHUB_TOKEN }}@github.com/${{ github.repository }}
-#
-#        git add "${{ inputs.manifestPath }}"
-#        git add -f ${{ github.workspace }}/dist/\*
-#        if [ -n "$(git diff-index --cached --name-only HEAD)" ]; then
-#          git commit -m "${{ inputs.commitMessage }}" || echo "Commit failed"
-#          # Attempt to pull and resolve conflicts
-#          git pull origin ${{ github.ref_name }} || {
-#            echo "Rebase failed, force pushing changes."
-#            git push --force origin HEAD:${{ github.ref_name }}
-#            exit 0
-#          }
-#          git push origin HEAD:${{ github.ref_name }}
-#        else
-#          echo "No changes to commit"
-#        fi
-
-#    - name: Commit and Push changes
-#      uses: actions/github-script@v7
-#      with:
-#        github-token: ${{ steps.get_installation_token.outputs.token || github.token }}
-#        script: |
-#          const fs = require('fs');
-#          const path = require('path');
-#
-#          async function run() {
-#            const octokit = github;
-#            const ref = "heads/${{ github.ref_name }}";
-#            const tree = "${{ github.sha }}";
-#            const [owner, repo] = "${{ github.repository }}".split('/');
-#            const commitMessage = "${{ inputs.commitMessage }}";
-#            const manifestPath = '${{ inputs.manifestPath }}';
-#
-#            try {
-#              const manifestContent = fs.readFileSync(manifestPath, 'utf8');
-#
-#              // Find the existing blob SHA for the manifest file in the current tree
-#              const { data: treeData } = await octokit.git.getTree({
-#                owner,
-#                repo,
-#                tree_sha: commitData.tree.sha,
-#                recursive: true
-#              });
-#
-#              const manifestFile = treeData.tree.find(file => file.path === manifestPath);
-#
-#              if (manifestFile) {
-#                // Get the current content of the manifest file in the repository
-#                const { data: blobData } = await octokit.git.getBlob({
-#                  owner,
-#                  repo,
-#                  file_sha: manifestFile.sha
-#                });
-#                const existingContent = Buffer.from(blobData.content, 'base64').toString('utf8');
-#
-#                // Check if the content has changed
-#                if (existingContent === manifestContent) {
-#                  console.log('No changes to commit');
-#                  return;
-#                }
-#              }
-#
-#              const { data: blobData } = await octokit.rest.git.createBlob({
-#                owner,
-#                repo,
-#                content: manifestContent,
-#                encoding: "utf-8"
-#              });
-#
-#              const relativePath = path.relative(".", manifestPath);
-#              const { data: treeData } = await octokit.rest.git.createTree({
-#                owner,
-#                repo,
-#                base_tree: tree,
-#                tree: [
-#                  {
-#                    path: relativePath,
-#                    mode: "100644",
-#                    type: "blob",
-#                    sha: blobData.sha
-#                  }
-#                ]
-#              });
-#
-#              const hasChanges = !treeData.tree.some(
-#                (file) => file.path === manifestPath && file.sha === blobData.sha
-#              );
-#
-#              console.log("has changes", hasChanges, JSON.stringify(treeData));
-#
-#              if (!hasChanges) {
-#                console.log('No changes to commit, skipping.');
-#                return;
-#              }
-#
-#              const newCommit = await octokit.rest.git.createCommit({
-#                owner,
-#                repo,
-#                message: commitMessage,
-#                tree: treeData.sha,
-#                parents: [ "${{ github.sha }}" ],
-#              });
-#
-#              await octokit.rest.git.updateRef({
-#                owner,
-#                repo,
-#                ref,
-#                sha: newCommit.data.sha,
-#                force: true
-#              });
-#
-#              console.log('Commit successfully created and pushed.');
-#            } catch (error) {
-#              console.error('Failed to create and push empty commit:', error);
-#              throw error;
-#            }
-#          }
-#          run();
 
     - name: Install dependencies
       shell: bash
