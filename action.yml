@@ -182,16 +182,15 @@ runs:
                     },
                     ...fs.readdirSync('${{ github.workspace }}/dist').map((file) => {
                         const relativePath = path.relative('.', '${{ github.workspace }}/dist/' + file);
-                        console.log('Adding dist file at path', relativePath);
                         return {
-                        path: relativePath,
-                        mode: '100644',
-                        type: 'blob',
-                        content: fs.readFileSync(
-                        '${{ github.workspace }}/dist/' + file,
-                        'utf-8',
-                      ),
-                    };
+                          path: relativePath,
+                          mode: '100644',
+                          type: 'blob',
+                          content: fs.readFileSync(
+                          '${{ github.workspace }}/dist/' + file,
+                          'utf-8',
+                        ),
+                      };
                     }),
                   ],
                 });
