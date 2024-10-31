@@ -171,7 +171,7 @@ runs:
                   ref
                 });
 
-                console.log("Adding file:", manifestPath);
+                console.log('Adding file:', manifestPath);
                 const newTree = await octokit.rest.git.createTree({
                   owner,
                   repo,
@@ -185,7 +185,7 @@ runs:
                     },
                     ...fs.readdirSync('${{ github.workspace }}/dist').map((file) => {
                         const relativePath = path.relative('.', '${{ github.workspace }}/dist/' + file);
-                        console.log("Adding file:", '${{ github.workspace }}/dist/' + file);
+                        console.log('Adding file:', '${{ github.workspace }}/dist/' + file);
                         return {
                           path: relativePath,
                           mode: '100644',
