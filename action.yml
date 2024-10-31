@@ -146,7 +146,7 @@ runs:
         GITHUB_TOKEN: ${{ steps.get_installation_token.outputs.token || github.token }}
       run: |
         git add "${{ inputs.manifestPath }}"
-        git add -f ${{ github.workspace }}/dist/\*
+        git add -f ${{ github.workspace }}/dist/index.js
         echo "Changed files:"
         echo "$(git diff-index --cached --name-only HEAD)"
         if [ -n "$(git diff-index --cached --name-only HEAD)" ]; then
