@@ -172,7 +172,7 @@ runs:
                 });
 
                 console.log('Adding file:', manifestPath);
-                const distPath = '${{ github.workspace }}/dist/'
+                const distPath = '${{ github.workspace }}/dist/';
                 const relativePath = path.relative('.', distPath + 'index.js');
                 console.log('Adding file:', relativePath);
                 const newTree = await octokit.rest.git.createTree({
@@ -187,7 +187,7 @@ runs:
                       content: fs.readFileSync(manifestPath, 'utf8'),
                     },
                     {
-                      path: distPath,
+                      path: relativePath,
                       mode: '100644',
                       type: 'blob',
                       content: fs.readFileSync(relativePath, 'utf8'),
