@@ -22,7 +22,7 @@ inputs:
     default: "20.10.0"
   treatAsEsm:
     description: "If the package is set to be treated as ESM, it will replace __dirname occurrences."
-    default: false
+    default: "false"
   sourcemap:
     description: "Generates the sourcemap for the compiled files"
 outputs: {}
@@ -40,16 +40,18 @@ runs:
     - name: Install dependencies
       shell: bash
       run: |
-        yarn install --immutable --immutable-cache --check-cache
+        bun install --frozen-lockfile
 
     - name: Build project
       shell: bash
       run: |
-        yarn add -DE @vercel/ncc
+        rm -rf dist
         echo "Compiling plugin..."
-        yarn ncc build ${{ inputs.pluginEntry }} -m ${{ inputs.sourcemap == 'true' && '-s' || '' }} -o dist
+        bun build ${{ inputs.pluginEntry }} --minify ${{ inputs.sourcemap == 'true' && '--sourcemap="linked"' || ''}}
+        --outdir dist --target node
         echo "Compiling plugin types..."
-        yarn ncc build ${{ inputs.schemaPath }} -m -o plugin
+        bun build ${{ inputs.schemaPath }} --minify ${{ inputs.sourcemap == 'true' && '--sourcemap="linked"' || '' }}
+        --outdir plugin --target node
 
     - name: Replace __dirname with import.meta.dirname
       if: ${{ inputs.treatAsEsm }}
