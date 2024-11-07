@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.1.3](https://github.com/ubiquity-os/action-deploy-plugin/compare/v1.1.2...v1.1.3) (2024-11-07)
+
+
+### Bug Fixes
+
+* add ESM support by replacing __dirname ([b722932](https://github.com/ubiquity-os/action-deploy-plugin/commit/b7229322141033319fd4a872e56f2cfa7cfc59b4))
+* adding all generated files ([f11d086](https://github.com/ubiquity-os/action-deploy-plugin/commit/f11d08692dbc7939f796383fa09fdd26ac7b87ce))
+* adding sourcemap option ([4bf048d](https://github.com/ubiquity-os/action-deploy-plugin/commit/4bf048d6f4307c9f45ddbf1efbd7403ff49c538b))
+* command should run on linux env ([0bcd69a](https://github.com/ubiquity-os/action-deploy-plugin/commit/0bcd69aadb7150f82eb59d3310d5b216aa3a6b68))
+* correct file addition logic in action.yml ([9690d25](https://github.com/ubiquity-os/action-deploy-plugin/commit/9690d25cf6f581b02f9b4ada6e76da993b8f2c3f))
+* correct path for dist file in git tree ([789e396](https://github.com/ubiquity-os/action-deploy-plugin/commit/789e39659da2824c177131f0181b87083270b1fd))
+* properly take all files ([b9fa926](https://github.com/ubiquity-os/action-deploy-plugin/commit/b9fa92646afdd9708ab428c3649ca78475038056))
+
 ## [1.1.2](https://github.com/ubiquity-os/action-deploy-plugin/compare/v1.1.1...v1.1.2) (2024-10-22)
 
 
