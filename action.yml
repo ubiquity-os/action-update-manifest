@@ -37,6 +37,8 @@ runs:
       with:
         node-version: ${{ inputs.nodeVersion }}
 
+    - uses: oven-sh/setup-bun@v2
+
     - name: Install dependencies
       shell: bash
       run: |
