@@ -49,11 +49,9 @@ runs:
       run: |
         rm -rf dist
         echo "Compiling plugin..."
-        bun build ${{ inputs.pluginEntry }} --minify ${{ inputs.sourcemap == 'true' && '--sourcemap="linked"' || ''}}
-        --outdir dist --target node
+        bun build ${{ inputs.pluginEntry }} --minify ${{ inputs.sourcemap == 'true' && '--sourcemap="linked"' || ''}} --outdir dist --target node
         echo "Compiling plugin types..."
-        bun build ${{ inputs.schemaPath }} --minify ${{ inputs.sourcemap == 'true' && '--sourcemap="linked"' || '' }}
-        --outdir plugin --target node
+        bun build ${{ inputs.schemaPath }} --minify ${{ inputs.sourcemap == 'true' && '--sourcemap="linked"' || '' }} --outdir plugin --target node
 
     - name: Replace __dirname with import.meta.dirname
       if: ${{ inputs.treatAsEsm }}
