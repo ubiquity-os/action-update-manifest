@@ -25,6 +25,7 @@ inputs:
     default: "false"
   sourcemap:
     description: "Generates the sourcemap for the compiled files"
+    default: "false"
 outputs: {}
 runs:
   using: "composite"
