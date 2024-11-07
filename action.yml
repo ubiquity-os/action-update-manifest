@@ -139,8 +139,8 @@ runs:
     - name: Format manifest using Prettier
       shell: bash
       run: |
-        yarn add -DE prettier
-        yarn prettier --write .
+        bun add -DE prettier
+        bun prettier --write .
 
     - name: Get GitHub App token
       if: env.APP_ID != '' && env.APP_PRIVATE_KEY != ''
@@ -153,7 +153,7 @@ runs:
     - name: Install dependencies for GitHub Auth
       shell: bash
       run: |
-        yarn add "@actions/github" glob
+        bun add "@actions/github" glob
 
     - name: Update manifest.json and dist folder
       shell: bash
