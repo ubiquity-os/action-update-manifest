@@ -189,7 +189,7 @@ runs:
 
                 console.log('Adding file:', manifestPath);
                 const distPath = '${{ github.workspace }}/dist/';
-                const distFiles = glob.sync(distPath + '**/*.{js}');
+                const distFiles = glob.sync(distPath + '**/*.js');
                 const treeEntries = [
                   {
                     path: manifestPath,
