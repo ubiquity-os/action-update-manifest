@@ -26,6 +26,9 @@ inputs:
   sourcemap:
     description: "Generates the sourcemap for the compiled files"
     default: "false"
+  minify:
+    description: "Minifies the generated code"
+    default: "true"
 outputs: {}
 runs:
   using: "composite"
@@ -50,9 +53,15 @@ runs:
       run: |
         rm -rf dist
         echo "Compiling plugin..."
-        bun build ${{ inputs.pluginEntry }} --minify ${{ inputs.sourcemap == 'true' && '--sourcemap="linked"' || ''}} --outdir dist --target node --entry-naming index.js
+        bun build ${{ inputs.pluginEntry }} \
+          ${{ inputs.minify == 'true' && '--minify' || ''}} \
+          ${{ inputs.sourcemap == 'true' && '--sourcemap="linked"' || ''}} \
+          --outdir dist --target node --entry-naming index.js
         echo "Compiling plugin types..."
-        bun build ${{ inputs.schemaPath }} --minify ${{ inputs.sourcemap == 'true' && '--sourcemap="linked"' || '' }} --outdir plugin --target node --entry-naming index.js
+        bun build ${{ inputs.schemaPath }} \
+          ${{ inputs.minify == 'true' && '--minify' || ''}} \
+          ${{ inputs.sourcemap == 'true' && '--sourcemap="linked"' || ''}} \
+          --outdir plugin --target node --entry-naming index.js
 
     - name: Replace __dirname with import.meta.dirname
       if: ${{ inputs.treatAsEsm }}
