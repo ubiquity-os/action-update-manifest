@@ -23,6 +23,8 @@ inputs:
   treatAsEsm:
     description: "If the package is set to be treated as ESM, it will replace __dirname occurrences."
     default: false
+  sourcemap:
+    description: "Generates the sourcemap for the compiled files"
 outputs: {}
 runs:
   using: "composite"
@@ -45,7 +47,7 @@ runs:
       run: |
         yarn add -DE @vercel/ncc
         echo "Compiling plugin..."
-        yarn ncc build ${{ inputs.pluginEntry }} -m -o dist
+        yarn ncc build ${{ inputs.pluginEntry }} -m ${{ inputs.sourcemap == 'true' && '-s' || '' }} -o dist
         echo "Compiling plugin types..."
         yarn ncc build ${{ inputs.schemaPath }} -m -o plugin
 
@@ -157,7 +159,7 @@ runs:
         GITHUB_TOKEN: ${{ steps.get_installation_token.outputs.token || github.token }}
       run: |
         git add "${{ inputs.manifestPath }}"
-        git add -f ${{ github.workspace }}/dist/*.{js,json}
+        git add -f ${{ github.workspace }}/dist/*.{js,json,map,cjs}
         echo "Changed files:"
         echo "$(git diff-index --cached --name-only HEAD)"
         if [ -n "$(git diff-index --cached --name-only HEAD)" ]; then
@@ -185,7 +187,7 @@ runs:
 
                 console.log('Adding file:', manifestPath);
                 const distPath = '${{ github.workspace }}/dist/';
-                const distFiles = glob.sync(distPath + '**/*.{js,json}');
+                const distFiles = glob.sync(distPath + '**/*.{js,json,map,cjs}');
                 const treeEntries = [
                   {
                     path: manifestPath,
