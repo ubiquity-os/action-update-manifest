@@ -54,7 +54,7 @@ runs:
       shell: bash
       run: |
         if [ "${{ inputs.treatAsEsm }}" = "true" ]; then
-          sed -i '' 's/__dirname/import.meta.dirname/g' "${{ github.workspace }}/dist/index.js"
+          sed -i 's/__dirname/import.meta.dirname/g' "${{ github.workspace }}/dist/index.js"
         fi
 
     - name: Update manifest configuration JSON
