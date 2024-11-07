@@ -149,7 +149,7 @@ runs:
     - name: Install dependencies for GitHub Auth
       shell: bash
       run: |
-        yarn add "@actions/github"
+        yarn add "@actions/github" glob
 
     - name: Update manifest.json and dist folder
       shell: bash
@@ -157,7 +157,7 @@ runs:
         GITHUB_TOKEN: ${{ steps.get_installation_token.outputs.token || github.token }}
       run: |
         git add "${{ inputs.manifestPath }}"
-        git add -f ${{ github.workspace }}/dist/index.js
+        git add -f ${{ github.workspace }}/dist/*.{js,json}
         echo "Changed files:"
         echo "$(git diff-index --cached --name-only HEAD)"
         if [ -n "$(git diff-index --cached --name-only HEAD)" ]; then
@@ -165,6 +165,7 @@ runs:
             const fs = require('fs');
             const path = require('path');
             const github = require('@actions/github');
+            const glob = require('glob');
             const manifestPath = path.relative('.', '${{ inputs.manifestPath }}');
 
             async function pushChanges() {
@@ -184,26 +185,30 @@ runs:
 
                 console.log('Adding file:', manifestPath);
                 const distPath = '${{ github.workspace }}/dist/';
-                const relativePath = path.relative('.', distPath + 'index.js');
-                console.log('Adding file:', relativePath);
+                const distFiles = glob.sync(distPath + '**/*.{js,json}');
+                const treeEntries = [
+                  {
+                    path: manifestPath,
+                    mode: '100644',
+                    type: 'blob',
+                    content: fs.readFileSync(manifestPath, 'utf8'),
+                  }
+                ];
+                for (const file of distFiles) {
+                  const relativePath = path.relative('.', file);
+                  console.log('Adding file:', relativePath);
+                  treeEntries.push({
+                    path: relativePath,
+                    mode: '100644',
+                    type: 'blob',
+                    content: fs.readFileSync(file, 'utf8'),
+                  });
+                }
                 const newTree = await octokit.rest.git.createTree({
                   owner,
                   repo,
                   base_tree: currentCommit.data.object.sha,
-                  tree: [
-                    {
-                      path: manifestPath,
-                      mode: '100644',
-                      type: 'blob',
-                      content: fs.readFileSync(manifestPath, 'utf8'),
-                    },
-                    {
-                      path: relativePath,
-                      mode: '100644',
-                      type: 'blob',
-                      content: fs.readFileSync(relativePath, 'utf8'),
-                    },
-                  ],
+                  tree: treeEntries,
                 });
 
                 const newCommit = await octokit.rest.git.createCommit({
