@@ -161,7 +161,7 @@ runs:
         GITHUB_TOKEN: ${{ steps.get_installation_token.outputs.token || github.token }}
       run: |
         git add "${{ inputs.manifestPath }}"
-        find ${{ github.workspace }}/dist -name "*.js" -print0 | xargs -0 git add -f
+        find ${{ github.workspace }}/dist \( -name "*.js" -o -name "*.map" \) -print0 | xargs -0 git add -f
         echo "Changed files:"
         echo "$(git diff-index --cached --name-only HEAD)"
         if [ -n "$(git diff-index --cached --name-only HEAD)" ]; then
@@ -189,7 +189,7 @@ runs:
 
                 console.log('Adding file:', manifestPath);
                 const distPath = '${{ github.workspace }}/dist/';
-                const distFiles = glob.sync(distPath + '**/*.js');
+                const distFiles = glob.sync(distPath + '**/*.{js,map}');
                 const treeEntries = [
                   {
                     path: manifestPath,
