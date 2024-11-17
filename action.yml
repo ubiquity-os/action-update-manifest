@@ -40,16 +40,17 @@ runs:
     - name: Install dependencies
       shell: bash
       run: |
-        yarn install --immutable --immutable-cache --check-cache
+        bun install --frozen-lockfile
 
     - name: Build project
       shell: bash
       run: |
-        yarn add -DE @vercel/ncc
+        bun add -DE @vercel/ncc
         echo "Compiling plugin..."
-        yarn ncc build ${{ inputs.pluginEntry }} -e "**/*.test.ts" -m ${{ inputs.sourcemap == 'true' && '-s' || '' }} -o dist
+        bun ncc build ${{ inputs.pluginEntry }} --external "./tests" -m ${{ inputs.sourcemap == 'true' && '-s' || '' }}
+        -o dist
         echo "Compiling plugin types..."
-        yarn ncc build ${{ inputs.schemaPath }} -e "**/*.test.ts" -m -o plugin
+        bun ncc build ${{ inputs.schemaPath }} --external "./tests" -m -o plugin
 
     - name: Replace __dirname with import.meta.dirname
       if: ${{ inputs.treatAsEsm }}
@@ -137,8 +138,8 @@ runs:
     - name: Format manifest using Prettier
       shell: bash
       run: |
-        yarn add -DE prettier
-        yarn prettier --write .
+        bun add -DE prettier
+        bun prettier --write .
 
     - name: Get GitHub App token
       if: env.APP_ID != '' && env.APP_PRIVATE_KEY != ''
@@ -151,7 +152,7 @@ runs:
     - name: Install dependencies for GitHub Auth
       shell: bash
       run: |
-        yarn add "@actions/github" glob
+        bun add "@actions/github" glob
 
     - name: Update manifest.json and dist folder
       shell: bash
